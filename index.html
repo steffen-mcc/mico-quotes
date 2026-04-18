@@ -16,6 +16,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<!-- Auth guard: keep body hidden until session confirmed -->
+<style id="mico-auth-style">body{visibility:hidden!important}</style>
 <style>
 /* ─── RESET & BASE ─────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -656,21 +658,7 @@ th.center, td.center { text-align: center; }
 </div>
 <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
-<!-- ════════════════ LOGIN OVERLAY ════════════════ -->
-<div id="app-login" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#0b1526 0%,#0d2247 60%,#1a3a6b 100%);z-index:9998;align-items:center;justify-content:center;flex-direction:column;gap:16px;">
-  <div style="font-size:36px;font-weight:800;color:white;letter-spacing:-.5px;text-shadow:0 2px 12px rgba(0,0,0,.4);">Mico <span style="color:#c8a94a;">Cooling</span></div>
-  <div style="color:rgba(255,255,255,.5);font-size:12px;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px;">Enter your password to continue</div>
-  <div style="display:flex;flex-direction:column;gap:10px;width:300px;">
-    <input type="password" id="app-pw-input" placeholder="Password"
-      style="padding:13px 16px;border-radius:10px;border:1.5px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:white;font-size:15px;outline:none;letter-spacing:.5px;"
-      onkeydown="if(event.key==='Enter')appLogin()">
-    <div id="app-pw-error" style="color:#ff6b6b;font-size:12px;min-height:16px;text-align:center;margin-top:-4px;"></div>
-    <button onclick="appLogin()"
-      style="padding:13px;background:linear-gradient(135deg,#c8a94a,#e0bb60);border:none;border-radius:10px;color:#0d2247;font-weight:800;font-size:15px;cursor:pointer;letter-spacing:.3px;box-shadow:0 4px 14px rgba(200,169,74,.35);">
-      Sign In
-    </button>
-  </div>
-</div>
+<!-- Login overlay removed — auth handled by Google OAuth via Supabase (login.micocc.net) -->
 
 <!-- ════════════════ TOP NAV ════════════════ -->
 <nav id="app-nav">
@@ -685,7 +673,8 @@ th.center, td.center { text-align: center; }
   </div>
   <div class="nav-right" style="display:flex;align-items:center;gap:10px;">
     <span id="sync-indicator" style="font-size:11px;color:rgba(255,255,255,.6);opacity:0;transition:opacity .3s;">⟳ Syncing...</span>
-    <button onclick="appLogout()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.75);font-size:12px;font-weight:600;padding:5px 12px;border-radius:6px;cursor:pointer;letter-spacing:.2px;" title="Sign out">Sign Out</button>
+    <span id="nav-user-email" style="font-size:11px;color:rgba(255,255,255,.5);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+    <button onclick="micoSignOut()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.75);font-size:12px;font-weight:600;padding:5px 12px;border-radius:6px;cursor:pointer;letter-spacing:.2px;" title="Sign out">Sign Out</button>
   </div>
 </nav>
 
@@ -1020,22 +1009,12 @@ th.center, td.center { text-align: center; }
       <div class="admin-section" id="section-security">
         <div class="section-header">
           <h2>Security</h2>
-          <p>Manage the app login password and the admin panel password.</p>
+          <p>App access is managed via Google Workspace SSO through the central MICO staff portal.</p>
         </div>
         <div class="card" style="max-width:400px;margin-bottom:20px">
-          <div class="quote-section-title" style="margin-bottom:14px">App Login Password</div>
-          <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">This is the password all users enter to access the app.</p>
-          <div class="form-group" style="margin-bottom:14px">
-            <label>New App Password</label>
-            <input type="password" id="app-pw-new" placeholder="New app password">
-          </div>
-          <div class="form-group" style="margin-bottom:14px">
-            <label>Confirm New App Password</label>
-            <input type="password" id="app-pw-confirm" placeholder="Confirm new app password">
-          </div>
-          <div class="form-actions">
-            <button class="btn btn-charcoal" onclick="changeAppPassword()">Update App Password</button>
-          </div>
+          <div class="quote-section-title" style="margin-bottom:14px">App Access</div>
+          <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Sign-in is handled by Google OAuth via <strong>login.micocc.net</strong>. Staff log in with their MICO Google Workspace accounts — no separate app password required.</p>
+          <p style="font-size:12px;color:var(--gray-500);">Logged in as: <strong id="admin-user-email" style="color:var(--navy);">—</strong></p>
         </div>
         <div class="card" style="max-width:400px">
           <div class="quote-section-title" style="margin-bottom:14px">Admin Panel Password</div>
@@ -1412,8 +1391,29 @@ let adminUnlocked = false;
 let idCounter = Date.now();
 function uid() { return 'id_' + (++idCounter); }
 
+// ─── MICO AUTH GUARD ─────────────────────────────────────────────────────────
+// Uses the same Supabase project (kbqkwlhmkvwnutqkcstx) for auth
+// Session tokens are forwarded here via URL hash from login.micocc.net
+const LOGIN_URL = 'https://login.micocc.net';
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+  // 1. Auth check — Supabase auto-processes any #access_token in the URL
+  const { data: { session }, error: authErr } = await sb.auth.getSession();
+  if (!session) {
+    window.location.replace(LOGIN_URL + '/?redirect=' + encodeURIComponent(location.href.split('#')[0]));
+    return;
+  }
+  // Session confirmed — reveal the page
+  document.getElementById('mico-auth-style')?.remove();
+  window.micoUser = session.user;
+  const email = session.user?.email || '';
+  const navEmail = document.getElementById('nav-user-email');
+  if (navEmail) navEmail.textContent = email;
+  const adminEmail = document.getElementById('admin-user-email');
+  if (adminEmail) adminEmail.textContent = email;
+
+  // 2. Load app data
   setAppLoading(true);
   try {
     settings = await DB.getSettings();
@@ -1424,12 +1424,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     try { quotes   = JSON.parse(localStorage.getItem('micoQuotes'))   || []; } catch(_){}
   }
   setAppLoading(false);
-  // Check if user is authenticated for this session
-  if(sessionStorage.getItem('micoAuth') !== 'true') {
-    document.getElementById('app-login').style.display = 'flex';
-    setTimeout(() => document.getElementById('app-pw-input').focus(), 50);
-    return;
-  }
   initQuoteBuilder();
   document.getElementById('qb-date').textContent = formatDate(new Date());
 });
@@ -1439,27 +1433,9 @@ function setAppLoading(on) {
   if (el) el.style.display = on ? 'flex' : 'none';
 }
 
-function appLogin() {
-  const input = document.getElementById('app-pw-input').value;
-  const pw = settings.appPassword || 'mico2024';
-  if(input === pw) {
-    sessionStorage.setItem('micoAuth', 'true');
-    document.getElementById('app-login').style.display = 'none';
-    document.getElementById('app-pw-input').value = '';
-    document.getElementById('app-pw-error').textContent = '';
-    initQuoteBuilder();
-    document.getElementById('qb-date').textContent = formatDate(new Date());
-  } else {
-    document.getElementById('app-pw-error').textContent = 'Incorrect password. Try again.';
-    document.getElementById('app-pw-input').value = '';
-    document.getElementById('app-pw-input').focus();
-  }
-}
-
-function appLogout() {
-  sessionStorage.removeItem('micoAuth');
-  document.getElementById('app-login').style.display = 'flex';
-  setTimeout(() => document.getElementById('app-pw-input').focus(), 50);
+async function micoSignOut() {
+  await sb.auth.signOut();
+  window.location.replace(LOGIN_URL);
 }
 
 function formatDate(d) {
