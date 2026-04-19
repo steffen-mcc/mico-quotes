@@ -196,7 +196,7 @@ html, body { height: 100%; font-family:'Inter',-apple-system,BlinkMacSystemFont,
   box-shadow: 0 3px 12px rgba(13,34,71,.3), 0 1px 3px rgba(0,0,0,.1);
 }
 .btn-primary:hover {
-  background: linear-gradient(135deg, #1a3a6b 0%, #0d2247 100%);
+  background: linear-gradient(135deg, #1a3a6b 0%, var(--navy) 100%);
   box-shadow: 0 5px 18px rgba(13,34,71,.4), 0 2px 6px rgba(0,0,0,.12);
   transform: translateY(-1px);
 }
@@ -212,7 +212,7 @@ html, body { height: 100%; font-family:'Inter',-apple-system,BlinkMacSystemFont,
 }
 .btn-success:hover { box-shadow: 0 5px 18px rgba(26,122,69,.45); transform: translateY(-1px); }
 .btn-danger {
-  background: linear-gradient(135deg, #c0392b 0%, #e04535 100%); color: white;
+  background: linear-gradient(135deg, var(--red) 0%, #e04535 100%); color: white;
   box-shadow: 0 2px 8px rgba(192,57,43,.3);
 }
 .btn-danger:hover { box-shadow: 0 4px 14px rgba(192,57,43,.4); transform: translateY(-1px); }
@@ -481,7 +481,7 @@ html, body { height: 100%; font-family:'Inter',-apple-system,BlinkMacSystemFont,
 
 /* ─── PRINT VIEW ──────────────────────────────────────────────────────────────── */
 #print-view { font-family: 'Segoe UI', system-ui, sans-serif; color: #1a2340; background: white; }
-.pv-header { display: flex; justify-content: space-between; align-items: stretch; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 4px solid #0d2247; gap: 16px; }
+.pv-header { display: flex; justify-content: space-between; align-items: stretch; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 4px solid var(--navy); gap: 16px; }
 .pv-logo-block { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; background: linear-gradient(135deg, #dde3ef 0%, #e8ecf5 100%); border: 1px solid #bcc7d8; border-radius: 10px; padding: 12px 18px 14px; box-shadow: 0 4px 14px rgba(13,34,71,.15), 0 1px 3px rgba(0,0,0,.08); flex: 1; }
 .pv-logo { height: 110px; width: auto; max-width: 280px; object-fit: contain; object-position: left; display: block; }
 .pv-company-info { font-size: 11px; color: #3a4a6b; line-height: 1; display: table; border-spacing: 0 4px; }
@@ -500,10 +500,10 @@ html, body { height: 100%; font-family:'Inter',-apple-system,BlinkMacSystemFont,
   height: 100%; box-sizing: border-box;
 }
 .pv-quote-num { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #8a9ab5; font-weight: 800; }
-.pv-quote-num strong { display: block; font-size: 28px; font-weight: 900; color: #0d2247; letter-spacing: -1px; margin-top: 2px; line-height: 1; }
+.pv-quote-num strong { display: block; font-size: 28px; font-weight: 900; color: var(--navy); letter-spacing: -1px; margin-top: 2px; line-height: 1; }
 .pv-quote-custnum { margin-top: 10px; padding-top: 10px; border-top: 1px solid #bcc7d8; }
 .pv-quote-custnum span { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #8a9ab5; font-weight: 800; margin-bottom: 2px; }
-.pv-quote-custnum strong { font-size: 14px; font-weight: 800; color: #0d2247; }
+.pv-quote-custnum strong { font-size: 14px; font-weight: 800; color: var(--navy); }
 .pv-bill-unit-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: stretch; }
 .pv-customer-block {
   flex: 1; background: linear-gradient(135deg, #dde3ef 0%, #e8ecf5 100%);
@@ -520,17 +520,17 @@ html, body { height: 100%; font-family:'Inter',-apple-system,BlinkMacSystemFont,
 .pv-customer-block p { font-size: 12px; line-height: 1.7; color: #1a2340; margin: 0; }
 .pv-unit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; }
 .pv-unit-item span { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: #8a9ab5; font-weight: 800; margin-bottom: 1px; }
-.pv-unit-item strong { font-size: 14px; font-weight: 700; color: #0d2247; }
+.pv-unit-item strong { font-size: 14px; font-weight: 700; color: var(--navy); }
 .pv-desc-section { margin-bottom: 10px; }
 .pv-section { margin-bottom: 10px; border: 1px solid #bcc7d8; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 14px rgba(13,34,71,.15), 0 1px 3px rgba(0,0,0,.08); background: linear-gradient(135deg, #dde3ef 0%, #e8ecf5 100%); }
-.pv-section-title { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: white; background: linear-gradient(90deg, #0b1526 0%, #0d2247 50%, #1a3a6b 100%); margin: 0; padding: 8px 14px; }
+.pv-section-title { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: white; background: linear-gradient(90deg, #0b1526 0%, var(--navy) 50%, #1a3a6b 100%); margin: 0; padding: 8px 14px; }
 .pv-table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 0; }
-.pv-table th { background: rgba(13,34,71,.12); color: #0d2247; padding: 6px 12px; text-align: left; font-size: 9.5px; text-transform: uppercase; letter-spacing: .7px; font-weight: 800; border-bottom: 1.5px solid #bcc7d8; }
+.pv-table th { background: rgba(13,34,71,.12); color: var(--navy); padding: 6px 12px; text-align: left; font-size: 9.5px; text-transform: uppercase; letter-spacing: .7px; font-weight: 800; border-bottom: 1.5px solid #bcc7d8; }
 .pv-table th.right { text-align: right; }
 .pv-table td { padding: 7px 12px; border-bottom: 1px solid rgba(188,199,216,.5); color: #1a2340; font-size: 12px; background: rgba(255,255,255,.55); }
 .pv-table tr:nth-child(even) td { background: rgba(255,255,255,.35); }
 .pv-table td.right { text-align: right; }
-.pv-table tfoot td { font-weight: 800; background: rgba(13,34,71,.12); border-top: 1.5px solid #bcc7d8; padding: 8px 12px; color: #0d2247; font-size: 12px; }
+.pv-table tfoot td { font-weight: 800; background: rgba(13,34,71,.12); border-top: 1.5px solid #bcc7d8; padding: 8px 12px; color: var(--navy); font-size: 12px; }
 .pv-table tfoot td.right { text-align: right; }
 .pv-totals { display: flex; justify-content: flex-end; margin: 10px 0 14px; }
 .pv-totals-inner { min-width: 300px; background: linear-gradient(135deg, #dde3ef 0%, #e8ecf5 100%); border: 1px solid #bcc7d8; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 14px rgba(13,34,71,.15), 0 1px 3px rgba(0,0,0,.08); }
@@ -543,7 +543,7 @@ html, body { height: 100%; font-family:'Inter',-apple-system,BlinkMacSystemFont,
   width: 280px;
 }
 .pv-totals-header { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #8a9ab5; font-weight: 800; text-align: center; }
-.pv-totals-header strong { display: block; font-size: 32px; font-weight: 900; color: #0d2247; letter-spacing: -1px; margin-top: 3px; line-height: 1; text-align: center; }
+.pv-totals-header strong { display: block; font-size: 32px; font-weight: 900; color: var(--navy); letter-spacing: -1px; margin-top: 3px; line-height: 1; text-align: center; }
 .pv-totals-breakdown { margin-top: 12px; padding-top: 12px; border-top: 1px solid #bcc7d8; display: flex; flex-direction: column; gap: 5px; }
 .pv-totals-top .pv-total-row { display: flex; justify-content: space-between; padding: 0; font-size: 12.5px; background: transparent; }
 .pv-totals-top .pv-total-row.sub { color: #3a4a6b; border-bottom: none; background: transparent; }
@@ -562,7 +562,7 @@ html, body { height: 100%; font-family:'Inter',-apple-system,BlinkMacSystemFont,
   box-shadow: 0 4px 14px rgba(13,34,71,.15), 0 1px 3px rgba(0,0,0,.08);
 }
 .pv-sig-block { flex: 1; }
-.pv-sig-line { border-bottom: 1.5px solid #0d2247; margin-top: 22px; margin-bottom: 5px; }
+.pv-sig-line { border-bottom: 1.5px solid var(--navy); margin-top: 22px; margin-bottom: 5px; }
 .pv-sig-label { font-size: 9.5px; color: #8a9ab5; text-transform: uppercase; letter-spacing: .8px; font-weight: 700; }
 .pv-footer {
   text-align: center; font-size: 10px; color: #8a9ab5; letter-spacing: .3px;
@@ -586,7 +586,7 @@ th.center, td.center { text-align: center; }
 #states-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .state-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--navy-light); border: 1px solid var(--silver-mid); border-radius: 20px; padding: 4px 12px 4px 14px; font-size: 12px; font-weight: 600; color: var(--navy); }
 .state-chip button { background: none; border: none; cursor: pointer; color: var(--silver); font-size: 12px; line-height: 1; padding: 0; transition: color .15s; }
-.state-chip button:hover { color: #c0392b; }
+.state-chip button:hover { color: var(--red); }
 
 /* ─── MODAL ──────────────────────────────────────────────────────────────────── */
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(11,21,38,.55); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
@@ -652,9 +652,9 @@ th.center, td.center { text-align: center; }
 
 <!-- ════════════════ APP LOADING SCREEN ════════════════ -->
 <div id="app-loading" style="display:flex;position:fixed;inset:0;background:linear-gradient(135deg,#0b1526 0%,#0d2247 60%,#1a3a6b 100%);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:18px;">
-  <div style="font-size:36px;font-weight:800;color:white;letter-spacing:-.5px;text-shadow:0 2px 12px rgba(0,0,0,.4);">Mico <span style="color:#c8a94a;">Cooling</span></div>
+  <div style="font-size:36px;font-weight:800;color:white;letter-spacing:-.5px;text-shadow:0 2px 12px rgba(0,0,0,.4);">Mico <span style="color:var(--accent);">Cooling</span></div>
   <div style="color:rgba(255,255,255,.55);font-size:13px;letter-spacing:.5px;text-transform:uppercase;">Loading your data...</div>
-  <div style="width:38px;height:38px;border:3px solid rgba(255,255,255,.15);border-top-color:#c8a94a;border-radius:50%;animation:spin .8s linear infinite;"></div>
+  <div style="width:38px;height:38px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;"></div>
 </div>
 <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
