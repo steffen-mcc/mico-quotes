@@ -1252,7 +1252,7 @@ th.center, td.center { text-align: center; }
 <!-- ════════════════════════════════════════════════════════════════
      SUPABASE SDK
 ════════════════════════════════════════════════════════════════ -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4"></script>
 
 <!-- ════════════════════════════════════════════════════════════════
      JAVASCRIPT
@@ -1398,20 +1398,23 @@ const LOGIN_URL = 'https://login.micocc.net';
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-  // 1. Auth check — Supabase auto-processes any #access_token in the URL
-  const { data: { session }, error: authErr } = await sb.auth.getSession();
-  if (!session) {
-    window.location.replace(LOGIN_URL + '/?redirect=' + encodeURIComponent(location.href.split('#')[0]));
-    return;
+  // 1. Auth check — skip when previewing locally via file://
+  if (location.protocol !== 'file:') {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      window.location.replace(LOGIN_URL + '/?redirect=' + encodeURIComponent(location.href.split('#')[0]));
+      return;
+    }
+    document.getElementById('mico-auth-style')?.remove();
+    window.micoUser = session.user;
+    const email = session.user?.email || '';
+    const navEmail = document.getElementById('nav-user-email');
+    if (navEmail) navEmail.textContent = email;
+    const adminEmail = document.getElementById('admin-user-email');
+    if (adminEmail) adminEmail.textContent = email;
+  } else {
+    document.getElementById('mico-auth-style')?.remove();
   }
-  // Session confirmed — reveal the page
-  document.getElementById('mico-auth-style')?.remove();
-  window.micoUser = session.user;
-  const email = session.user?.email || '';
-  const navEmail = document.getElementById('nav-user-email');
-  if (navEmail) navEmail.textContent = email;
-  const adminEmail = document.getElementById('admin-user-email');
-  if (adminEmail) adminEmail.textContent = email;
 
   // 2. Load app data
   setAppLoading(true);
