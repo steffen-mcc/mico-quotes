@@ -734,7 +734,7 @@ th.center, td.center { text-align: center; }
       </div>
       <div style="display:flex;gap:10px;">
         <button class="btn btn-charcoal" onclick="newQuote()">+ New Quote</button>
-        <button class="btn btn-gold" onclick="previewQuote()">👁 Preview & Print</button>
+        <button class="btn btn-gold" onclick="saveQuote()">Save</button>
       </div>
     </div>
 
@@ -915,11 +915,7 @@ th.center, td.center { text-align: center; }
         </div>
       </div>
       <div class="totals-actions">
-        <div style="display:flex;gap:10px;">
-          <button class="btn btn-gold" onclick="saveQuote()">Save</button>
-          <button class="btn btn-danger btn-sm" onclick="confirmClearQuote()">🗑 Clear</button>
-        </div>
-        <button class="btn btn-charcoal" onclick="previewQuote()" style="font-size:15px;padding:12px 28px;">👁 Preview & Export PDF</button>
+        <button class="btn btn-gold" onclick="generateProposal()" style="font-size:15px;padding:12px 28px;">Generate Proposal</button>
       </div>
     </div>
 
@@ -1433,6 +1429,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   setAppLoading(false);
   initQuoteBuilder();
   document.getElementById('qb-date').textContent = formatDate(new Date());
+
+  // Logo → silent reset to blank builder
+  const logo = document.querySelector('.nav-logo-img') || document.querySelector('.nav-logo');
+  if (logo) { logo.style.cursor='pointer'; logo.title='New Quote'; logo.addEventListener('click', () => { newQuote(true); showPage('quote'); }); }
 });
 
 function setAppLoading(on) {
@@ -2325,6 +2325,323 @@ async function previewQuote() {
     })));
   }
   window.print();
+}
+
+// ─── GENERATE PROPOSAL (new tab) ─────────────────────────────────────────────
+async function generateProposal() {
+  await saveQuote();
+  const s = settings;
+  const q = currentQuote;
+  const co = s.company || {};
+  const laborTotal = q.laborLines.reduce((acc,r) => {
+    if(r.noCharge) return acc;
+    const effRate = r.overtime ? (parseFloat(r.rate)||0) * 1.5 : (parseFloat(r.rate)||0);
+    return acc + (parseFloat(r.hours)||0) * effRate;
+  }, 0);
+  const matTotal = q.materialLines.reduce((acc,r) => acc+(parseFloat(r.qty)||1)*(parseFloat(r.sellPrice)||0),0);
+  const miscTotal = q.miscLines.reduce((acc,r) => r.noCharge ? acc : acc+(parseFloat(r.qty)||1)*(parseFloat(r.unitPrice)||0),0);
+  const subtotal = laborTotal + matTotal + miscTotal;
+  const taxRate = (s.taxRates || []).find(t => t.id === q.taxRateId);
+  const taxPct = taxRate ? taxRate.pct : 0;
+  const taxAmount = subtotal * (taxPct / 100);
+  const grand = subtotal + taxAmount;
+
+  let laborHTML = '';
+  if(q.laborLines.length) {
+    laborHTML = `
+    <div class="pv-section">
+      <div class="pv-section-title">Labor</div>
+      <table class="pv-table">
+        <thead><tr><th>Category</th><th>Description</th><th class="right">Hours</th><th class="right">Rate/Hr</th><th class="right">Total</th></tr></thead>
+        <tbody>
+          ${q.laborLines.map(r => {
+            const cat = s.laborCategories.find(lc => lc.id === r.categoryId);
+            const nc = !!r.noCharge;
+            const ot = !!r.overtime;
+            const effRate = ot ? (parseFloat(r.rate)||0) * 1.5 : (parseFloat(r.rate)||0);
+            const tot = (parseFloat(r.hours)||0) * effRate;
+            const rowStyle = nc ? 'opacity:.7' : ot ? 'background:#fff8ec;' : '';
+            const rateDisplay = ot
+              ? `${formatCurrency(effRate)}<br><span style="font-size:9px;color:#cc6a00;font-weight:700;">OT (base ${formatCurrency(r.rate)})</span>`
+              : formatCurrency(r.rate);
+            const totalDisplay = nc
+              ? '<span style="font-weight:700;color:#888;">N/C</span>'
+              : ot
+                ? `<span style="display:inline-block;background:#ff8c00;color:#fff;font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;margin-right:3px;vertical-align:middle;">OT</span>${formatCurrency(tot)}`
+                : formatCurrency(tot);
+            return `<tr ${rowStyle ? `style="${rowStyle}"` : ''}>
+              <td>${escHtml(cat?.name||r.categoryId||'—')}</td>
+              <td>${escHtml(r.description||'—')}</td>
+              <td class="right">${r.hours}</td>
+              <td class="right">${rateDisplay}</td>
+              <td class="right">${totalDisplay}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+        <tfoot><tr><td colspan="4" class="right fw-bold">Labor Subtotal</td><td class="right fw-bold">${formatCurrency(laborTotal)}</td></tr></tfoot>
+      </table>
+    </div>`;
+  }
+
+  let matHTML = '';
+  if(q.materialLines.length) {
+    matHTML = `
+    <div class="pv-section">
+      <div class="pv-section-title">Materials & Parts</div>
+      <table class="pv-table">
+        <thead><tr><th>Description</th><th class="right">Qty</th><th class="right">Unit Price</th><th class="right">Total</th></tr></thead>
+        <tbody>
+          ${q.materialLines.map(r => {
+            let desc = r.description;
+            if(!desc && r.partId) { const p = s.commonParts.find(x=>x.id===r.partId); desc=p?.name||''; }
+            const tot = (parseFloat(r.qty)||1)*(parseFloat(r.sellPrice)||0);
+            return `<tr>
+              <td>${escHtml(desc||'—')}</td>
+              <td class="right">${r.qty}</td>
+              <td class="right">${formatCurrency(r.sellPrice)}</td>
+              <td class="right">${formatCurrency(tot)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+        <tfoot><tr><td colspan="3" class="right fw-bold">Materials Subtotal</td><td class="right fw-bold">${formatCurrency(matTotal)}</td></tr></tfoot>
+      </table>
+    </div>`;
+  }
+
+  let miscHTML = '';
+  if(q.miscLines.length) {
+    miscHTML = `
+    <div class="pv-section">
+      <div class="pv-section-title">Miscellaneous</div>
+      <table class="pv-table">
+        <thead><tr><th>Description</th><th class="right">Qty</th><th class="right">Unit Price</th><th class="right">Total</th></tr></thead>
+        <tbody>
+          ${q.miscLines.map(r => {
+            const tot = (parseFloat(r.qty)||1)*(parseFloat(r.unitPrice)||0);
+            const nc = !!r.noCharge;
+            return `<tr ${nc ? 'style="opacity:.7"' : ''}>
+              <td>${escHtml(r.description||'—')}</td>
+              <td class="right">${r.qty}</td>
+              <td class="right">${formatCurrency(r.unitPrice)}</td>
+              <td class="right" style="${nc?'font-weight:700;color:#888;':''}"> ${nc ? 'N/C' : formatCurrency(tot)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+        <tfoot><tr><td colspan="3" class="right fw-bold">Misc Subtotal</td><td class="right fw-bold">${formatCurrency(miscTotal)}</td></tr></tfoot>
+      </table>
+    </div>`;
+  }
+
+  const notesHTML = q.notes ? `
+    <div class="pv-section pv-notes-box">
+      <div class="pv-section-title">Terms &amp; Notes</div>
+      <div class="pv-notes">${escHtml(q.notes)}</div>
+    </div>` : '';
+
+  const u = {
+    make:   document.getElementById('q-unit-make')?.value  || q.unit?.make   || '',
+    model:  document.getElementById('q-unit-model')?.value || q.unit?.model  || '',
+    serial: document.getElementById('q-unit-serial')?.value|| q.unit?.serial || '',
+    id:     document.getElementById('q-unit-id')?.value    || q.unit?.id     || '',
+  };
+  const unitHTML = `
+    <div class="pv-unit-block">
+      <h3>Unit Information</h3>
+      <div class="pv-unit-grid">
+        <div class="pv-unit-item"><span>Make</span><strong>${escHtml(u.make||'—')}</strong></div>
+        <div class="pv-unit-item"><span>Model</span><strong>${escHtml(u.model||'—')}</strong></div>
+        <div class="pv-unit-item"><span>Serial #</span><strong>${escHtml(u.serial||'—')}</strong></div>
+        <div class="pv-unit-item"><span>Unit ID</span><strong>${escHtml(u.id||'—')}</strong></div>
+      </div>
+    </div>`;
+
+  const descSectionHTML = q.description ? `
+    <div class="pv-section pv-desc-section">
+      <div class="pv-section-title">Description of Work</div>
+      <div style="padding:8px 14px;font-size:12px;color:#1a2340;line-height:1.7;">${escHtml(q.description)}</div>
+    </div>` : '';
+
+  const addrLine1 = q.customer.address || '';
+  const addrLine2Parts = [q.customer.city, q.customer.state].filter(Boolean).join(', ');
+  const addrLine2 = addrLine2Parts + (q.customer.zip ? ' ' + q.customer.zip : '');
+  const taxRowHTML = taxPct > 0 ? `<div class="pv-total-row sub"><span>Tax</span><span>${formatCurrency(taxAmount)}</span></div>` : '';
+
+  const bodyHTML = `
+    <div class="pv-header">
+      <div class="pv-logo-block">
+        <img src="${LOGO_IMG}" alt="Mico Cooling" class="pv-logo">
+        <div class="pv-company-info">
+          ${co.address ? `<span><span class="ci-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="#3a4a6b"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/></svg></span><span class="ci-text">${escHtml(co.address)}</span></span>` : ''}
+          ${co.phone   ? `<span><span class="ci-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="#3a4a6b"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg></span><span class="ci-text">${escHtml(co.phone)}</span></span>` : ''}
+          ${co.website ? `<span><span class="ci-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="#3a4a6b"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></span><span class="ci-text">${escHtml(co.website)}</span></span>` : ''}
+          ${co.email   ? `<span><span class="ci-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="#3a4a6b"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></span><span class="ci-text">${escHtml(co.email)}</span></span>` : ''}
+          ${co.license ? `<span><span class="ci-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="#3a4a6b"><path d="M20 4H4c-1.1 0-2 .9-2 2v3h20V6c0-1.1-.9-2-2-2zM2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-7H2v7zm7-4h6v2H9v-2z"/></svg></span><span class="ci-text">Lic # ${escHtml(co.license)}</span></span>` : ''}
+        </div>
+      </div>
+      <div class="pv-totals-top">
+        <div class="pv-totals-header">Total Estimate<strong>${formatCurrency(grand)}</strong></div>
+        <div class="pv-totals-breakdown">
+          ${laborTotal > 0 ? `<div class="pv-total-row sub"><span>Labor</span><span>${formatCurrency(laborTotal)}</span></div>` : ''}
+          ${matTotal > 0 ? `<div class="pv-total-row sub"><span>Materials</span><span>${formatCurrency(matTotal)}</span></div>` : ''}
+          ${miscTotal > 0 ? `<div class="pv-total-row sub"><span>Misc</span><span>${formatCurrency(miscTotal)}</span></div>` : ''}
+          ${taxPct > 0 ? `<div class="pv-total-row sub"><span>Subtotal</span><span>${formatCurrency(subtotal)}</span></div>` : ''}
+          ${taxRowHTML}
+        </div>
+      </div>
+      <div class="pv-quote-info">
+        <div class="pv-quote-box">
+          <div class="pv-quote-date">${formatDate(new Date(q.date + 'T00:00:00'))}</div>
+          <div class="pv-quote-num" style="margin-top:8px;">Quote #<strong>${escHtml(q.number||'—')}</strong></div>
+          ${q.customer?.custNum ? `<div class="pv-quote-custnum"><span>Customer #</span><strong>${escHtml(q.customer.custNum)}</strong></div>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="pv-bill-unit-row">
+      <div class="pv-customer-block">
+        <h3>Service Location</h3>
+        <p>
+          <strong>${escHtml(q.customer.name||'—')}</strong><br>
+          ${addrLine1 ? escHtml(addrLine1) + '<br>' : ''}
+          ${addrLine2 ? escHtml(addrLine2) + '<br>' : ''}
+          ${q.customer.phone ? escHtml(q.customer.phone) + '<br>' : ''}
+          ${q.customer.email ? escHtml(q.customer.email) : ''}
+        </p>
+      </div>
+      ${unitHTML}
+    </div>
+    ${descSectionHTML}
+    ${laborHTML}
+    ${matHTML}
+    ${miscHTML}
+    <div class="pv-notes-sig-row">
+      ${notesHTML || '<div class="pv-section pv-notes-box" style="display:none"></div>'}
+      <div class="pv-signature">
+        <div class="pv-sig-block">
+          <div class="pv-sig-line"></div>
+          <div class="pv-sig-label">Customer Signature</div>
+        </div>
+        <div class="pv-sig-block">
+          <div class="pv-sig-line"></div>
+          <div class="pv-sig-label">Date Accepted</div>
+        </div>
+      </div>
+    </div>`;
+
+  const win = window.open('', '_blank');
+  if (!win) { showToast('Pop-up blocked — please allow pop-ups for this site.', 'error'); return; }
+  win.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proposal — ${escHtml(q.customer?.name || 'Quote')} #${escHtml(q.number || '')}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy: #0d2247;
+  --navy-deep: #0b1526;
+  --navy-mid: #1a3a6b;
+}
+body { font-family: 'Segoe UI', system-ui, sans-serif; color: #1a2340; background: #f6f8fb; padding: 0; margin: 0; }
+.proposal-toolbar {
+  position: sticky; top: 0; z-index: 100;
+  background: linear-gradient(90deg, #0b1526 0%, #0d2247 60%, #1a3a6b 100%);
+  padding: 12px 28px; display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 2px 12px rgba(0,0,0,.25);
+}
+.proposal-toolbar-title { color: rgba(255,255,255,.7); font-size: 13px; font-weight: 600; letter-spacing: .3px; }
+.proposal-toolbar-btns { display: flex; gap: 10px; }
+.tb-btn {
+  border: none; border-radius: 8px; padding: 8px 20px; font-size: 13px; font-weight: 700;
+  cursor: pointer; letter-spacing: .3px; transition: opacity .15s;
+}
+.tb-btn:hover { opacity: .88; }
+.tb-btn-print { background: #c8a94a; color: #0b1526; }
+.tb-btn-close { background: rgba(255,255,255,.12); color: white; border: 1px solid rgba(255,255,255,.2); }
+.proposal-body { max-width: 900px; margin: 28px auto; padding: 28px 20px 48px; }
+/* ─── PV STYLES ─────────────────────────────────────── */
+#print-view { font-family: 'Segoe UI', system-ui, sans-serif; color: #1a2340; background: white; }
+.pv-header { display: flex; justify-content: space-between; align-items: stretch; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 4px solid var(--navy); gap: 16px; }
+.pv-logo-block { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; background: linear-gradient(135deg, #dde3ef 0%, #e8ecf5 100%); border: 1px solid #bcc7d8; border-radius: 10px; padding: 12px 18px 14px; box-shadow: 0 4px 14px rgba(13,34,71,.15), 0 1px 3px rgba(0,0,0,.08); flex: 1; }
+.pv-logo { height: 110px; width: auto; max-width: 280px; object-fit: contain; object-position: left; display: block; }
+.pv-company-info { font-size: 11px; color: #3a4a6b; line-height: 1; display: table; border-spacing: 0 4px; }
+.pv-company-info span { display: table-row; text-align: left; }
+.pv-company-info span .ci-icon { display: table-cell; width: 18px; text-align: center; padding-right: 5px; }
+.pv-company-info span .ci-text { display: table-cell; vertical-align: middle; }
+.pv-quote-info { display: flex; flex-direction: column; align-items: flex-end; padding-top: 0; justify-content: flex-start; align-self: stretch; }
+.pv-quote-date { font-size: 9.5px; color: #8a9ab5; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; text-align: right; }
+.pv-quote-box { display: block; text-align: right; background: linear-gradient(135deg, #dde3ef 0%, #e8ecf5 100%); border: 1px solid #bcc7d8; border-radius: 10px; padding: 12px 18px 14px; box-shadow: 0 4px 14px rgba(13,34,71,.15), 0 1px 3px rgba(0,0,0,.08); height: 100%; box-sizing: border-box; }
+.pv-quote-num { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #8a9ab5; font-weight: 800; }
+.pv-quote-num strong { display: block; font-size: 28px; font-weight: 900; color: var(--navy); letter-spacing: -1px; margin-top: 2px; line-height: 1; }
+.pv-quote-custnum { margin-top: 10px; padding-top: 10px; border-top: 1px solid #bcc7d8; }
+.pv-quote-custnum span { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #8a9ab5; font-weight: 800; margin-bottom: 2px; }
+.pv-quote-custnum strong { font-size: 14px; font-weight: 800; color: var(--navy); }
+.pv-bill-unit-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: stretch; }
+.pv-customer-block { flex: 1; background: linear-gradient(135deg, #dde3ef 0%, #e8ecf5 100%); border-radius: 10px; padding: 12px 18px; border: 1px solid #bcc7d8; box-shadow: 0 4px 14px rgba(13,34,71,.15), 0 1px 3px rgba(0,0,0,.08); }
+.pv-unit-block { flex: 1; background: linear-gradient(135deg, #dde3ef 0%, #e8ecf5 100%); border-radius: 10px; padding: 12px 18px; border: 1px solid #bcc7d8; box-shadow: 0 4px 14px rgba(13,34,71,.15), 0 1px 3px rgba(0,0,0,.08); }
+.pv-customer-block h3, .pv-unit-block h3 { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: #8a9ab5; margin-bottom: 6px; font-weight: 800; }
+.pv-customer-block p { font-size: 12px; line-height: 1.7; color: #1a2340; margin: 0; }
+.pv-unit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; }
+.pv-unit-item span { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: #8a9ab5; font-weight: 800; margin-bottom: 1px; }
+.pv-unit-item strong { font-size: 14px; font-weight: 700; color: var(--navy); }
+.pv-desc-section { margin-bottom: 10px; }
+.pv-section { margin-bottom: 10px; border: 1px solid #bcc7d8; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 14px rgba(13,34,71,.15), 0 1px 3px rgba(0,0,0,.08); background: linear-gradient(135deg, #dde3ef 0%, #e8ecf5 100%); }
+.pv-section-title { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: white; background: linear-gradient(90deg, #0b1526 0%, var(--navy) 50%, #1a3a6b 100%); margin: 0; padding: 8px 14px; }
+.pv-table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 0; }
+.pv-table th { background: rgba(13,34,71,.12); color: var(--navy); padding: 6px 12px; text-align: left; font-size: 9.5px; text-transform: uppercase; letter-spacing: .7px; font-weight: 800; border-bottom: 1.5px solid #bcc7d8; }
+.pv-table th.right { text-align: right; }
+.pv-table td { padding: 7px 12px; border-bottom: 1px solid rgba(188,199,216,.5); color: #1a2340; font-size: 12px; background: rgba(255,255,255,.55); }
+.pv-table tr:nth-child(even) td { background: rgba(255,255,255,.35); }
+.pv-table td.right { text-align: right; }
+.pv-table tfoot td { font-weight: 800; background: rgba(13,34,71,.12); border-top: 1.5px solid #bcc7d8; padding: 8px 12px; color: var(--navy); font-size: 12px; }
+.pv-table tfoot td.right { text-align: right; }
+.pv-totals-top { background: linear-gradient(135deg, #dde3ef 0%, #e8ecf5 100%); border: 1px solid #bcc7d8; border-radius: 10px; padding: 12px 18px 14px; box-shadow: 0 4px 14px rgba(13,34,71,.15), 0 1px 3px rgba(0,0,0,.08); width: 280px; }
+.pv-totals-header { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #8a9ab5; font-weight: 800; text-align: center; }
+.pv-totals-header strong { display: block; font-size: 32px; font-weight: 900; color: var(--navy); letter-spacing: -1px; margin-top: 3px; line-height: 1; text-align: center; }
+.pv-totals-breakdown { margin-top: 12px; padding-top: 12px; border-top: 1px solid #bcc7d8; display: flex; flex-direction: column; gap: 5px; }
+.pv-totals-top .pv-total-row { display: flex; justify-content: space-between; padding: 0; font-size: 12.5px; background: transparent; }
+.pv-totals-top .pv-total-row.sub { color: #3a4a6b; border-bottom: none; background: transparent; }
+.pv-total-row { display: flex; justify-content: space-between; padding: 6px 16px; font-size: 12px; }
+.pv-total-row.sub { color: #5a6a8a; border-bottom: 1px solid #e8ecf4; }
+.pv-total-row.grand { font-size: 16px; font-weight: 900; color: white; background: linear-gradient(90deg,#0d2247,#1a3a6b); padding: 10px 16px; }
+.pv-notes { font-size: 10.5px; line-height: 1.7; color: #3a4a6b; }
+.pv-notes-sig-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: stretch; }
+.pv-notes-box { flex: 1.4; margin-bottom: 0 !important; }
+.pv-notes-box .pv-notes { padding: 8px 14px; }
+.pv-signature { flex: 1; display: flex; flex-direction: column; gap: 14px; justify-content: center; background: linear-gradient(135deg, #dde3ef 0%, #e8ecf5 100%); border: 1px solid #bcc7d8; border-radius: 10px; padding: 14px 18px; box-shadow: 0 4px 14px rgba(13,34,71,.15), 0 1px 3px rgba(0,0,0,.08); }
+.pv-sig-block { flex: 1; }
+.pv-sig-line { border-bottom: 1.5px solid var(--navy); margin-top: 22px; margin-bottom: 5px; }
+.pv-sig-label { font-size: 9.5px; color: #8a9ab5; text-transform: uppercase; letter-spacing: .8px; font-weight: 700; }
+.fw-bold { font-weight: 800; }
+@media print {
+  .proposal-toolbar { display: none !important; }
+  body { background: white; }
+  .proposal-body { margin: 0; padding: 10mm 12mm; max-width: none; }
+  .pv-header { break-inside: avoid; }
+  .pv-bill-unit-row { break-inside: avoid; }
+  .pv-section { break-inside: avoid; margin-bottom: 7px !important; }
+  .pv-notes-sig-row { break-inside: avoid; }
+  .pv-table tr { break-inside: avoid; }
+  @page { margin: 6mm 10mm 8mm 10mm; }
+}
+</style>
+</head>
+<body>
+<div class="proposal-toolbar">
+  <span class="proposal-toolbar-title">Client Proposal — ${escHtml(q.customer?.name || '')}${q.number ? ' · Quote #' + escHtml(q.number) : ''}</span>
+  <div class="proposal-toolbar-btns">
+    <button class="tb-btn tb-btn-print" onclick="window.print()">🖨 Print / Save PDF</button>
+    <button class="tb-btn tb-btn-close" onclick="window.close()">✕ Close</button>
+  </div>
+</div>
+<div class="proposal-body">
+  ${bodyHTML}
+</div>
+</body>
+</html>`);
+  win.document.close();
 }
 
 // ─── HISTORY ─────────────────────────────────────────────────────────────────
