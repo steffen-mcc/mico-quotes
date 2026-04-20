@@ -706,6 +706,7 @@ th.center, td.center { text-align: center; }
   <div class="nav-right" style="display:flex;align-items:center;gap:10px;">
     <div class="conn-indicator" id="conn-indicator"><span class="conn-dot"></span><span class="conn-lbl">Connecting…</span></div>
     <span id="sync-indicator" style="font-size:11px;color:rgba(255,255,255,.6);opacity:0;transition:opacity .3s;">⟳ Syncing...</span>
+    <span id="quote-save-status" style="font-size:11px;transition:color .3s;"></span>
     <span id="nav-user-email" style="font-size:11px;color:rgba(255,255,255,.5);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button onclick="micoSignOut()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.75);font-size:12px;font-weight:600;padding:5px 12px;border-radius:6px;cursor:pointer;letter-spacing:.2px;" title="Sign out">Sign Out</button>
   </div>
@@ -915,7 +916,7 @@ th.center, td.center { text-align: center; }
       </div>
       <div class="totals-actions">
         <div style="display:flex;gap:10px;">
-          <button class="btn btn-charcoal" onclick="saveQuote()">💾 Save</button>
+          <button class="btn btn-gold" onclick="saveQuote()">Save</button>
           <button class="btn btn-danger btn-sm" onclick="confirmClearQuote()">🗑 Clear</button>
         </div>
         <button class="btn btn-charcoal" onclick="previewQuote()" style="font-size:15px;padding:12px 28px;">👁 Preview & Export PDF</button>
@@ -1395,7 +1396,7 @@ const DB = {
       updated_at:    new Date().toISOString()
     });
     setSyncing(false);
-    if (error) { console.warn('Supabase saveQuote failed:', error); toast('Saved locally — sync failed', 'error'); }
+    if (error) { console.warn('Supabase saveQuote failed:', error); setAutoSaveStatus('err'); toast('Saved locally — sync failed', 'error'); }
   },
 
   async deleteQuote(id) {
@@ -1605,7 +1606,29 @@ function _createNewQuote() {
 }
 
 let _dirty = false;
-function markDirty() { _dirty = true; }
+function markDirty() { _dirty = true; scheduleAutoSave(); }
+
+let _autoSaveTimer = null;
+function scheduleAutoSave() {
+  if (!currentQuote) return;
+  clearTimeout(_autoSaveTimer);
+  setAutoSaveStatus('pending');
+  _autoSaveTimer = setTimeout(autoSaveToCloud, 4000);
+}
+async function autoSaveToCloud() {
+  if (!currentQuote) return;
+  const name = document.getElementById('q-cust-name').value.trim();
+  const wo   = document.getElementById('qb-number').value.trim();
+  if (!name && !wo) return;  // nothing meaningful to save yet
+  await saveQuote(true);
+}
+function setAutoSaveStatus(state) {
+  const el = document.getElementById('quote-save-status');
+  if (!el) return;
+  if (state === 'pending') { el.style.color = 'rgba(255,255,255,.45)'; el.textContent = 'saving…'; }
+  else if (state === 'ok')  { el.style.color = '#22c55e'; el.textContent = 'saved ✓'; setTimeout(() => { el.textContent = ''; }, 3000); }
+  else if (state === 'err') { el.style.color = '#f87171'; el.textContent = 'not saved'; }
+}
 function isDirty() { return _dirty || (currentQuote && (currentQuote.laborLines.length || currentQuote.materialLines.length || currentQuote.miscLines.length || document.getElementById('q-cust-name').value)); }
 
 function confirmClearQuote() {
@@ -2045,7 +2068,7 @@ function calcTotals() {
 }
 
 // ─── SAVE QUOTE ───────────────────────────────────────────────────────────────
-async function saveQuote() {
+async function saveQuote(silent=false) {
   if(!currentQuote) return;
   // Collect form values
   currentQuote.number              = document.getElementById('qb-number').value.trim();
@@ -2092,7 +2115,8 @@ async function saveQuote() {
   currentQuote.savedAt    = new Date().toISOString();
   await DB.saveQuote(currentQuote);
   _dirty = false;
-  toast('Quote saved!', 'success');
+  if (!silent) toast('Quote saved!', 'success');
+  setAutoSaveStatus('ok');
 }
 
 // ─── PREVIEW & PRINT ─────────────────────────────────────────────────────────
