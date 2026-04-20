@@ -1343,48 +1343,32 @@ const DB = {
   async getSettings() {
     try {
       const { data, error } = await sb.from('app_settings').select('data').eq('id', 1).maybeSingle();
-      if (data?.data) {
-        localStorage.setItem('micoSettings', JSON.stringify(data.data));
-        return data.data;
-      }
+      if (data?.data) return data.data;
     } catch(e) { console.warn('Supabase getSettings failed:', e); }
-    // Fallback: localStorage → hardcoded defaults
-    try { return JSON.parse(localStorage.getItem('micoSettings')) || JSON.parse(JSON.stringify(DEFAULT_SETTINGS)); }
-    catch(e) { return JSON.parse(JSON.stringify(DEFAULT_SETTINGS)); }
+    return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
   },
 
   saveSettings(s) {
-    // Write to localStorage immediately so the UI never blocks
-    localStorage.setItem('micoSettings', JSON.stringify(s));
-    // Sync to Supabase in background
     setSyncing(true);
     sb.from('app_settings')
       .upsert({ id: 1, data: s, updated_at: new Date().toISOString() })
       .then(({ error }) => {
         setSyncing(false);
-        if (error) { console.warn('Supabase saveSettings failed:', error); toast('Saved locally — sync failed', 'error'); }
+        if (error) { console.warn('Supabase saveSettings failed:', error); toast('Settings sync failed', 'error'); }
       });
   },
 
   async getQuotes() {
     try {
       const { data, error } = await sb.from('quotes').select('data').order('saved_at', { ascending: false });
-      if (data) {
-        const qs = data.map(r => r.data);
-        localStorage.setItem('micoQuotes', JSON.stringify(qs));
-        return qs;
-      }
+      if (data) return data.map(r => r.data);
     } catch(e) { console.warn('Supabase getQuotes failed:', e); }
-    try { return JSON.parse(localStorage.getItem('micoQuotes')) || []; }
-    catch(e) { return []; }
+    return [];
   },
 
   async saveQuote(q) {
-    // Update local array
     const idx = quotes.findIndex(x => x.id === q.id);
     if (idx >= 0) quotes[idx] = q; else quotes.unshift(q);
-    localStorage.setItem('micoQuotes', JSON.stringify(quotes));
-    // Sync to Supabase
     setSyncing(true);
     const { error } = await sb.from('quotes').upsert({
       id:            q.id,
@@ -1396,12 +1380,11 @@ const DB = {
       updated_at:    new Date().toISOString()
     });
     setSyncing(false);
-    if (error) { console.warn('Supabase saveQuote failed:', error); setAutoSaveStatus('err'); toast('Saved locally — sync failed', 'error'); }
+    if (error) { console.warn('Supabase saveQuote failed:', error); setAutoSaveStatus('err'); toast('Save failed — not synced', 'error'); }
   },
 
   async deleteQuote(id) {
     quotes = quotes.filter(q => q.id !== id);
-    localStorage.setItem('micoQuotes', JSON.stringify(quotes));
     const { error } = await sb.from('quotes').delete().eq('id', id);
     if (error) console.warn('Supabase deleteQuote failed:', error);
   }
@@ -1442,10 +1425,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     quotes   = await DB.getQuotes();
     setConnected(true);
   } catch(e) {
-    console.warn('Init load failed, using cached data:', e);
+    console.warn('Init load failed:', e);
     setConnected(false);
-    try { settings = JSON.parse(localStorage.getItem('micoSettings')) || JSON.parse(JSON.stringify(DEFAULT_SETTINGS)); } catch(_){}
-    try { quotes   = JSON.parse(localStorage.getItem('micoQuotes'))   || []; } catch(_){}
+    settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+    quotes   = [];
   }
   setAppLoading(false);
   initQuoteBuilder();
