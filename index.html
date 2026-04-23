@@ -193,10 +193,6 @@ html, body { height: 100%; font-family:'Inter',-apple-system,BlinkMacSystemFont,
   padding: 26px; margin-bottom: 22px;
   border: 1px solid rgba(220,228,240,.6);
 }
-.card-title {
-  font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 16px;
-  padding-bottom: 12px; border-bottom: 1px solid var(--gray-200);
-}
 
 /* ─── FORMS ─────────────────────────────────────────────────────────────────── */
 .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
@@ -421,9 +417,6 @@ html, body { height: 100%; font-family:'Inter',-apple-system,BlinkMacSystemFont,
 
 /* ─── BADGE / PILL ──────────────────────────────────────────────────────────── */
 .badge { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 11px; font-weight: 700; }
-.badge-blue { background: var(--navy-light); color: var(--navy); }
-.badge-green { background: #e2f4ea; color: var(--green); }
-.badge-gray { background: var(--gray-200); color: var(--gray-600); }
 
 /* ─── TOAST ──────────────────────────────────────────────────────────────────── */
 #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
@@ -445,10 +438,6 @@ html, body { height: 100%; font-family:'Inter',-apple-system,BlinkMacSystemFont,
 .text-center { text-align: center; }
 .text-muted { color: var(--gray-500); }
 .fw-bold { font-weight: 700; }
-.markup-badge {
-  display: inline-block; background: var(--navy-light); color: var(--navy);
-  font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; white-space: nowrap;
-}
 .delete-confirm { display: none; }
 .part-type-toggle { display: flex; gap: 6px; align-items: center; }
 .part-type-toggle label { font-size: 12px; color: var(--gray-600); cursor: pointer; }
@@ -688,8 +677,6 @@ th.center, td.center { text-align: center; }
   <div style="width:38px;height:38px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;"></div>
 </div>
 <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
-
-<!-- Login overlay removed — auth handled by Google OAuth via Supabase (login.micocc.net) -->
 
 <!-- ════════════════ TOP NAV ════════════════ -->
 <nav id="app-nav">
@@ -1500,7 +1487,7 @@ function initQuoteBuilder() {
   const sel = document.getElementById('q-cust-type');
   sel.innerHTML = '<option value="">— Select type —</option>';
   settings.customerTypes.forEach(ct => {
-    sel.innerHTML += `<option value="${ct.id}">${ct.name}</option>`;
+    sel.innerHTML += `<option value="${ct.id}">${escHtml(ct.name)}</option>`;
   });
   // State dropdown
   populateStateDropdown();
@@ -2237,7 +2224,6 @@ async function previewQuote() {
     </div>` : '';
 
   // Build full address line for print
-  const addrParts = [q.customer.address, q.customer.city, q.customer.state ? (q.customer.city ? q.customer.state : q.customer.state) : ''].filter(Boolean);
   const addrLine1 = q.customer.address || '';
   const addrLine2Parts = [q.customer.city, q.customer.state].filter(Boolean).join(', ');
   const addrLine2 = addrLine2Parts + (q.customer.zip ? ' ' + q.customer.zip : '');
@@ -2527,7 +2513,7 @@ async function generateProposal() {
     </div>`;
 
   const win = window.open('', '_blank');
-  if (!win) { showToast('Pop-up blocked — please allow pop-ups for this site.', 'error'); return; }
+  if (!win) { toast('Pop-up blocked — please allow pop-ups for this site.', 'error'); return; }
   win.document.write(`<!DOCTYPE html>
 <html lang="en">
 <head>
