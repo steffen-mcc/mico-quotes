@@ -469,7 +469,7 @@ html, body { height: 100%; font-family:'Inter',-apple-system,BlinkMacSystemFont,
 /* ─── PRINT STYLES ───────────────────────────────────────────────────────────── */
 @media print {
   body { background: white; font-size: 12px; }
-  #app-nav, #quote-page, #history-page, #admin-page, #toast-container, #app-loading { display: none !important; }
+  #app-nav, #quote-page, #school-page, #school-history-page, #history-page, #admin-page, #toast-container, #app-loading { display: none !important; }
   #print-view { position: static !important; left: auto !important; visibility: visible !important; display: block !important; }
   .no-print { display: none !important; }
   @page { margin: 6mm 10mm 8mm 10mm; }
@@ -685,8 +685,9 @@ th.center, td.center { text-align: center; }
   <span class="nav-appname">Service Quotes</span>
   <div class="nav-divider"></div>
   <div class="nav-tabs">
-    <button class="nav-tab active" onclick="showPage('quote')">Quote Builder</button>
-    <button class="nav-tab" onclick="showPage('history')">Quote History</button>
+    <button class="nav-tab active" onclick="showPage('quote')">Service Quotes</button>
+    <button class="nav-tab" onclick="showPage('school')">School Quotes</button>
+    <button class="nav-tab" onclick="showPage('history')">History</button>
     <button class="nav-tab" onclick="showPage('admin')">Admin</button>
   </div>
   <div class="nav-right" style="display:flex;align-items:center;gap:10px;">
@@ -940,14 +941,20 @@ th.center, td.center { text-align: center; }
   <!-- Admin Panel (hidden until unlocked) -->
   <div id="admin-panel" style="display:none;">
     <div id="admin-sidebar">
-      <div class="sidebar-section-label">Settings</div>
+      <div class="sidebar-section-label">General</div>
       <button class="sidebar-item active" data-section="company" onclick="showAdminSection('company',this)">
         <span class="si-icon">🏢</span> Company Info
       </button>
       <button class="sidebar-item" data-section="security" onclick="showAdminSection('security',this)">
         <span class="si-icon">🔑</span> Security
       </button>
-      <div class="sidebar-section-label">Pricing</div>
+      <button class="sidebar-item" data-section="tax-rates" onclick="showAdminSection('tax-rates',this)">
+        <span class="si-icon">🏛</span> Tax Rates
+      </button>
+      <button class="sidebar-item" data-section="states" onclick="showAdminSection('states',this)">
+        <span class="si-icon">🗺</span> States
+      </button>
+      <div class="sidebar-section-label">Service Quotes</div>
       <button class="sidebar-item" data-section="customer-types" onclick="showAdminSection('customer-types',this)">
         <span class="si-icon">👤</span> Customer Types
       </button>
@@ -960,19 +967,18 @@ th.center, td.center { text-align: center; }
       <button class="sidebar-item" data-section="markup" onclick="showAdminSection('markup',this)">
         <span class="si-icon">📈</span> Markup Tiers
       </button>
-      <div class="sidebar-section-label">Library</div>
       <button class="sidebar-item" data-section="parts" onclick="showAdminSection('parts',this)">
         <span class="si-icon">📦</span> Parts Library
       </button>
-      <button class="sidebar-item" data-section="tax-rates" onclick="showAdminSection('tax-rates',this)">
-        <span class="si-icon">🏛</span> Tax Rates
-      </button>
-      <button class="sidebar-item" data-section="states" onclick="showAdminSection('states',this)">
-        <span class="si-icon">🗺</span> States
-      </button>
-      <div class="sidebar-section-label">Quote Settings</div>
       <button class="sidebar-item" data-section="quote-settings" onclick="showAdminSection('quote-settings',this)">
         <span class="si-icon">📋</span> Quote Settings
+      </button>
+      <div class="sidebar-section-label">School Quotes</div>
+      <button class="sidebar-item" data-section="school-cats" onclick="showAdminSection('school-cats',this)">
+        <span class="si-icon">🏫</span> School Categories
+      </button>
+      <button class="sidebar-item" data-section="school-labor-cats" onclick="showAdminSection('school-labor-cats',this)">
+        <span class="si-icon">🔧</span> School Labor Cats
       </button>
     </div>
 
@@ -1238,11 +1244,214 @@ th.center, td.center { text-align: center; }
         </div>
       </div>
 
+
+      <!-- SCHOOL CATEGORIES -->
+      <div class="admin-section" id="section-school-cats">
+        <div class="section-header">
+          <h2>School Categories</h2>
+          <p>Each school district has its own hourly rate and flat parts markup %.</p>
+        </div>
+        <div class="card">
+          <table class="data-table" style="margin-bottom:20px">
+            <thead><tr><th>Name</th><th>Hourly Rate ($/hr)</th><th>Parts Markup (%)</th><th style="text-align:center">Action</th></tr></thead>
+            <tbody id="sc-rows"></tbody>
+          </table>
+          <div class="form-grid-3" style="max-width:560px;margin-top:12px">
+            <div class="form-group"><label>Name</label><input type="text" id="sc-new-name" placeholder="e.g. Yonkers"></div>
+            <div class="form-group"><label>Hourly Rate</label><input type="number" id="sc-new-rate" min="0" step="0.01" placeholder="0.00"></div>
+            <div class="form-group"><label>Markup %</label><input type="number" id="sc-new-markup" min="0" step="0.1" placeholder="0.0"></div>
+          </div>
+          <div class="form-actions"><button class="btn btn-primary" onclick="addSchoolCat()">+ Add School Category</button></div>
+        </div>
+      </div>
+
+      <!-- SCHOOL LABOR CATEGORIES -->
+      <div class="admin-section" id="section-school-labor-cats">
+        <div class="section-header">
+          <h2>School Labor Categories</h2>
+          <p>Labor categories for school quotes. Rate is set per school category, not per category type.</p>
+        </div>
+        <div class="card">
+          <table class="data-table" style="margin-bottom:20px">
+            <thead><tr><th>Category Name</th><th style="text-align:center">Action</th></tr></thead>
+            <tbody id="slc-rows"></tbody>
+          </table>
+          <div class="form-grid" style="max-width:340px;margin-top:12px">
+            <div class="form-group"><label>New Category Name</label><input type="text" id="slc-new-name" placeholder="e.g. Technician (Repair)"></div>
+          </div>
+          <div class="form-actions"><button class="btn btn-primary" onclick="addSchoolLaborCat()">+ Add Labor Category</button></div>
+        </div>
+      </div>
+
     </div><!-- /admin-content -->
   </div><!-- /admin-panel -->
 </div><!-- /admin-page -->
 
 <!-- ════════════════ PRINT VIEW ════════════════ -->
+
+<!-- SCHOOL QUOTES PAGE -->
+<div class="page" id="school-page">
+  <div style="padding:28px;max-width:1120px;margin:0 auto;">
+    <div class="quote-header-bar">
+      <div>
+        <h1 style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--navy-mid);margin-bottom:10px;">School Quote Builder</h1>
+        <div class="quote-meta">
+          <div class="quote-meta-item">
+            <div class="wo-field">
+              <span class="wo-label">WO#</span>
+              <input type="text" id="sq-number" placeholder="WO-0000" style="padding:8px 14px!important;border:2px solid var(--silver-light)!important;border-radius:var(--radius-sm)!important;background:var(--gray-50)!important;color:var(--navy)!important;font-size:20px!important;font-weight:800!important;width:180px!important;letter-spacing:.5px;box-shadow:0 1px 4px rgba(13,34,71,.07)!important;transition:all .15s!important;">
+            </div>
+          </div>
+          <div class="quote-meta-item"><label>Date</label><strong id="sq-date"></strong></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-charcoal" onclick="newSchoolQuote()">+ New</button>
+        <button class="btn btn-gold" onclick="saveSchoolQuote()">Save</button>
+        <button class="btn btn-secondary" onclick="showPage('school-history')">History</button>
+        <button class="btn btn-charcoal" onclick="previewSchoolQuote()">Preview / Print</button>
+        <button class="btn btn-accent" onclick="generateSchoolProposal()">Generate Proposal</button>
+      </div>
+    </div>
+
+    <!-- School Category + Customer -->
+    <div class="quote-section">
+      <div class="quote-section-title">School &amp; Customer Info</div>
+      <div class="card" style="padding:20px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">
+          <div class="form-group">
+            <label>School Category</label>
+            <select id="sq-school-cat" onchange="onSchoolCatChange()">
+              <option value="">&#8212; Select School &#8212;</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Customer # (optional)</label>
+            <input type="text" id="sq-cust-num" placeholder="Cust #" style="font-size:16px;font-weight:700;">
+          </div>
+          <div class="form-group">
+            <label>Customer / Contact Name</label>
+            <input type="text" id="sq-cust-name" placeholder="Name">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px">
+          <div class="form-group"><label>Phone</label><input type="tel" id="sq-cust-phone" placeholder="(000) 000-0000"></div>
+          <div class="form-group"><label>Email</label><input type="email" id="sq-cust-email" placeholder="email@school.edu"></div>
+          <div class="form-group" style="grid-column:span 2"><label>Address</label><input type="text" id="sq-cust-addr" placeholder="Street address"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Unit Info -->
+    <div class="quote-section">
+      <div class="quote-section-title">Unit Information</div>
+      <div class="card" style="padding:20px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px">
+          <div class="form-group"><label>Make</label><input type="text" id="sq-unit-make" placeholder="e.g. Carrier"></div>
+          <div class="form-group"><label>Model</label><input type="text" id="sq-unit-model" placeholder="Model #"></div>
+          <div class="form-group"><label>Serial #</label><input type="text" id="sq-unit-serial" placeholder="Serial #"></div>
+          <div class="form-group"><label>Unit ID</label><input type="text" id="sq-unit-id" placeholder="Unit ID"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Description -->
+    <div class="quote-section">
+      <div class="quote-section-title">Description of Work</div>
+      <div class="card" style="padding:20px">
+        <div class="form-group"><textarea id="sq-description" placeholder="Describe the work being performed..." style="min-height:70px"></textarea></div>
+      </div>
+    </div>
+
+    <!-- Labor -->
+    <div class="quote-section">
+      <div class="quote-section-title">Labor</div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="line-table">
+          <thead><tr>
+            <th style="width:220px">Category</th>
+            <th>Description</th>
+            <th style="width:90px;text-align:right">Hours</th>
+            <th style="width:120px;text-align:right">Rate/hr</th>
+            <th class="right" style="width:100px">Total</th>
+            <th style="width:60px;text-align:center">N/C</th>
+            <th style="width:42px"></th>
+          </tr></thead>
+          <tbody id="sq-labor-rows"></tbody>
+        </table>
+        <div style="padding:12px 16px"><button class="btn btn-secondary btn-sm" onclick="addSchoolLaborRow()">+ Add Labor Line</button></div>
+      </div>
+    </div>
+
+    <!-- Materials -->
+    <div class="quote-section">
+      <div class="quote-section-title">Materials &amp; Parts</div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="line-table">
+          <thead><tr>
+            <th>Part / Description</th>
+            <th style="width:70px;text-align:right">Qty</th>
+            <th style="width:110px;text-align:right">Cost</th>
+            <th style="width:120px;text-align:right">Markup</th>
+            <th style="width:120px;text-align:right">Sell Price</th>
+            <th class="right" style="width:100px">Total</th>
+            <th style="width:42px"></th>
+          </tr></thead>
+          <tbody id="sq-material-rows"></tbody>
+        </table>
+        <div style="padding:12px 16px"><button class="btn btn-secondary btn-sm" onclick="addSchoolMaterialRow()">+ Add Material</button></div>
+      </div>
+    </div>
+
+    <!-- Misc -->
+    <div class="quote-section">
+      <div class="quote-section-title">Miscellaneous</div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="line-table">
+          <thead><tr>
+            <th>Description</th>
+            <th style="width:70px;text-align:right">Qty</th>
+            <th style="width:120px;text-align:right">Unit Price</th>
+            <th class="right" style="width:100px">Total</th>
+            <th style="width:60px;text-align:center">N/C</th>
+            <th style="width:42px"></th>
+          </tr></thead>
+          <tbody id="sq-misc-rows"></tbody>
+        </table>
+        <div style="padding:12px 16px"><button class="btn btn-secondary btn-sm" onclick="addSchoolMiscRow()">+ Add Misc Item</button></div>
+      </div>
+    </div>
+
+    <!-- Totals + Notes -->
+    <div class="totals-panel">
+      <div class="totals-grid">
+        <div class="totals-table">
+          <div class="totals-row subtotal"><span>Labor</span><span id="sq-tot-labor">$0.00</span></div>
+          <div class="totals-row subtotal"><span>Materials</span><span id="sq-tot-materials">$0.00</span></div>
+          <div class="totals-row subtotal"><span>Misc</span><span id="sq-tot-misc">$0.00</span></div>
+          <div class="totals-row divider grand-total"><span>Total</span><span id="sq-tot-grand">$0.00</span></div>
+        </div>
+      </div>
+      <div class="notes-grid" style="margin-top:20px">
+        <div class="form-group"><label>Terms &amp; Notes (printed)</label><textarea id="sq-notes" style="min-height:70px"></textarea></div>
+        <div class="form-group"><label>Internal Notes (not printed)</label><textarea id="sq-internal" style="min-height:70px"></textarea></div>
+      </div>
+    </div>
+  </div>
+</div><!-- /school-page -->
+
+<!-- SCHOOL HISTORY PAGE -->
+<div class="page" id="school-history-page">
+  <div style="padding:28px;max-width:1120px;margin:0 auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <h1 style="font-size:24px;font-weight:700;color:var(--navy)">School Quote History</h1>
+      <button class="btn btn-charcoal" onclick="showPage('school');newSchoolQuote()">+ New School Quote</button>
+    </div>
+    <input type="text" id="sq-history-search" placeholder="  Search by WO#, school, name, or amount" oninput="filterSchoolHistory()" style="width:100%;padding:10px 14px;border:1.5px solid var(--silver-light);border-radius:var(--radius-md,8px);font-size:14px;background:white;box-shadow:var(--shadow-card);box-sizing:border-box;margin-bottom:16px;">
+    <div id="sq-history-list"></div>
+  </div>
+</div><!-- /school-history-page -->
+
 <div id="print-view" style="padding: 20mm 20mm; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <!-- Dynamically populated -->
 </div>
@@ -1294,6 +1503,19 @@ const DEFAULT_SETTINGS = {
     'ct_2': { 'lc_1':145, 'lc_2':100, 'lc_3':145, 'lc_1776091555978':100, 'lc_1776091568227':245, 'lc_1776091576180':245 },
     'ct_3': { 'lc_1':150, 'lc_2':100, 'lc_3':150, 'lc_1776091555978':100, 'lc_1776091568227':250, 'lc_1776091576180':250 }
   },
+  schoolCategories: [
+    { id:'sc_1', name:'Yonkers',      hourlyRate:0, markup:0 },
+    { id:'sc_2', name:'New Rochelle', hourlyRate:0, markup:0 },
+    { id:'sc_3', name:'White Plains', hourlyRate:0, markup:0 }
+  ],
+  schoolLaborCategories: [
+    { id:'slc_1', name:'Technician (Diagnostic)' },
+    { id:'slc_2', name:'Helper (Diagnostic)' },
+    { id:'slc_3', name:'Technician (Repair)' },
+    { id:'slc_4', name:'Helper (Repair)' },
+    { id:'slc_5', name:'Team (Diagnostic)' },
+    { id:'slc_6', name:'Team (Repair)' }
+  ],
   markupTiers: [
     { id:'mt_1', min:0,   max:49.99,  pct:50 },
     { id:'mt_2', min:50,  max:199.99, pct:40 },
@@ -1369,6 +1591,37 @@ const DB = {
     quotes = quotes.filter(q => q.id !== id);
     const { error } = await sb.from('quotes').delete().eq('id', id);
     if (error) console.warn('Supabase deleteQuote failed:', error);
+  },
+
+  async getSchoolQuotes() {
+    try {
+      const { data, error } = await sb.from('school_quotes').select('data').order('saved_at', { ascending: false });
+      if (data) return data.map(r => r.data);
+    } catch(e) { console.warn('Supabase getSchoolQuotes failed:', e); }
+    return [];
+  },
+
+  async saveSchoolQuote(q) {
+    const idx = schoolQuotes.findIndex(x => x.id === q.id);
+    if (idx >= 0) schoolQuotes[idx] = q; else schoolQuotes.unshift(q);
+    setSyncing(true);
+    const { error } = await sb.from('school_quotes').upsert({
+      id:            q.id,
+      data:          q,
+      wo_number:     q.number || null,
+      customer_name: q.customer?.name || null,
+      grand_total:   q.grandTotal || 0,
+      saved_at:      q.savedAt || new Date().toISOString(),
+      updated_at:    new Date().toISOString()
+    });
+    setSyncing(false);
+    if (error) { console.warn('Supabase saveSchoolQuote failed:', error); toast('Save failed — not synced', 'error'); }
+  },
+
+  async deleteSchoolQuote(id) {
+    schoolQuotes = schoolQuotes.filter(q => q.id !== id);
+    const { error } = await sb.from('school_quotes').delete().eq('id', id);
+    if (error) console.warn('Supabase deleteSchoolQuote failed:', error);
   }
 };
 
@@ -1382,7 +1635,9 @@ function setSyncing(on) {
 // ─── APP STATE ────────────────────────────────────────────────────────────────
 let settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS)); // pre-load defaults; overwritten on init
 let quotes = [];
+let schoolQuotes = [];
 let currentQuote = null;
+let currentSchoolQuote = null;
 let adminUnlocked = false;
 let idCounter = Date.now();
 function uid() { return 'id_' + (++idCounter); }
@@ -1403,18 +1658,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Load app data
   setAppLoading(true);
   try {
-    settings = await DB.getSettings();
-    quotes   = await DB.getQuotes();
+    settings     = await DB.getSettings();
+    quotes       = await DB.getQuotes();
+    schoolQuotes = await DB.getSchoolQuotes();
     setConnected(true);
   } catch(e) {
     console.warn('Init load failed:', e);
     setConnected(false);
-    settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
-    quotes   = [];
+    settings     = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+    quotes       = [];
+    schoolQuotes = [];
   }
   setAppLoading(false);
   initQuoteBuilder();
+  initSchoolBuilder();
   document.getElementById('qb-date').textContent = formatDate(new Date());
+  document.getElementById('sq-date').textContent  = formatDate(new Date());
 
   // Logo → silent reset to blank builder
   const logo = document.querySelector('.nav-logo-img') || document.querySelector('.nav-logo');
@@ -1454,9 +1713,10 @@ function showPage(page) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById(page + '-page').classList.add('active');
   const tabs = document.querySelectorAll('.nav-tab');
-  const idx = {'quote':0,'history':1,'admin':2}[page];
-  if(tabs[idx]) tabs[idx].classList.add('active');
+  const tabIdx = {'quote':0,'school':1,'school-history':1,'history':2,'admin':3}[page];
+  if(tabs[tabIdx] !== undefined) tabs[tabIdx].classList.add('active');
   if(page === 'history') renderHistory();
+  if(page === 'school-history') renderSchoolHistory();
   if(page === 'admin') initAdminPage();
 }
 
@@ -2771,6 +3031,8 @@ function loadAdminData() {
   renderParts();
   renderTaxRates();
   renderStates();
+  renderSchoolCats();
+  renderSchoolLaborCats();
 }
 
 // ─ Company ─
@@ -3107,6 +3369,676 @@ function saveStates() {
 }
 
 // ─── UTILITIES ────────────────────────────────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SCHOOL QUOTES BUILDER
+// ═══════════════════════════════════════════════════════════════════════════
+
+let _sqDirty = false;
+
+function _createNewSchoolQuote() {
+  currentSchoolQuote = {
+    id: uid(), type: 'school',
+    number: '', date: new Date().toISOString().slice(0,10),
+    schoolCatId: '', schoolCatName: '',
+    hourlyRate: 0, markup: 0,
+    customer: { name:'', custNum:'', phone:'', email:'', address:'' },
+    unit: { make:'', model:'', serial:'', id:'' },
+    description: '',
+    laborLines: [], materialLines: [], miscLines: [],
+    laborTotal:0, matTotal:0, miscTotal:0, grandTotal:0,
+    notes:'', internalNotes:'', savedAt:null
+  };
+  ['sq-number','sq-cust-name','sq-cust-num','sq-cust-phone','sq-cust-email','sq-cust-addr',
+   'sq-unit-make','sq-unit-model','sq-unit-serial','sq-unit-id','sq-description','sq-notes','sq-internal']
+    .forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  const sqDate = document.getElementById('sq-date');
+  if(sqDate) sqDate.textContent = formatDate(new Date());
+  populateSchoolCatDropdown();
+  renderSchoolLaborRows();
+  renderSchoolMaterialRows();
+  renderSchoolMiscRows();
+  calcSchoolTotals();
+  _sqDirty = false;
+}
+
+function initSchoolBuilder() {
+  populateSchoolCatDropdown();
+  if(!currentSchoolQuote) _createNewSchoolQuote();
+}
+
+function newSchoolQuote(silent) {
+  if(!silent && _sqDirty) {
+    confirmAction('Unsaved Changes','You have unsaved changes. Start a new school quote anyway?',
+      () => { _sqDirty=false; _createNewSchoolQuote(); });
+    return;
+  }
+  _createNewSchoolQuote();
+}
+
+function populateSchoolCatDropdown() {
+  const sel = document.getElementById('sq-school-cat');
+  if(!sel) return;
+  const cats = settings.schoolCategories || [];
+  sel.innerHTML = '<option value="">-- Select School --</option>' +
+    cats.map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
+  if(currentSchoolQuote) sel.value = currentSchoolQuote.schoolCatId || '';
+}
+
+function onSchoolCatChange() {
+  _sqDirty = true;
+  const catId = document.getElementById('sq-school-cat').value;
+  const cat = (settings.schoolCategories||[]).find(c=>c.id===catId);
+  if(currentSchoolQuote) {
+    currentSchoolQuote.schoolCatId   = catId;
+    currentSchoolQuote.schoolCatName = cat ? cat.name : '';
+    currentSchoolQuote.hourlyRate    = cat ? parseFloat(cat.hourlyRate)||0 : 0;
+    currentSchoolQuote.markup        = cat ? parseFloat(cat.markup)||0 : 0;
+    currentSchoolQuote.laborLines.forEach(r => { if(!r.rateOverride) r.rate = currentSchoolQuote.hourlyRate; });
+    renderSchoolLaborRows();
+    renderSchoolMaterialRows(); // refresh markup display
+    calcSchoolTotals();
+  }
+}
+
+// ── LABOR ──
+function addSchoolLaborRow() {
+  if(!currentSchoolQuote) return;
+  const rate = currentSchoolQuote.hourlyRate || 0;
+  const row = { id:uid(), categoryId:'', description:'', hours:1, rate, rateOverride:false, noCharge:false };
+  currentSchoolQuote.laborLines.push(row);
+  renderSchoolLaborRows();
+  _sqDirty = true;
+}
+
+function renderSchoolLaborRows() {
+  const tbody = document.getElementById('sq-labor-rows');
+  if(!tbody) return;
+  if(!currentSchoolQuote || !currentSchoolQuote.laborLines.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted" style="padding:20px">No labor lines yet.</td></tr>';
+    calcSchoolTotals(); return;
+  }
+  tbody.innerHTML = '';
+  const cats = settings.schoolLaborCategories || [];
+  currentSchoolQuote.laborLines.forEach(row => {
+    const nc = !!row.noCharge;
+    const total = nc ? 0 : (parseFloat(row.hours)||0)*(parseFloat(row.rate)||0);
+    const catOpts = cats.map(c=>`<option value="${c.id}" ${row.categoryId===c.id?'selected':''}>${escHtml(c.name)}</option>`).join('');
+    tbody.innerHTML += `
+    <tr data-slid="${row.id}" ${nc?'class="labor-nc-row"':''}>
+      <td><select onchange="updateSqLaborField('${row.id}','categoryId',this.value)"><option value="">-- Select --</option>${catOpts}</select></td>
+      <td><input type="text" value="${escHtml(row.description)}" placeholder="Optional notes..." oninput="updateSqLaborField('${row.id}','description',this.value)"></td>
+      <td><input type="number" value="${row.hours}" min="0" step="0.25" style="text-align:right" oninput="updateSqLaborField('${row.id}','hours',this.value)"></td>
+      <td>
+        <div class="rate-cell">
+          <input type="number" value="${(parseFloat(row.rate)||0).toFixed(2)}" min="0" step="0.01" style="text-align:right" ${row.rateOverride?'':'readonly'} id="sqlr-${row.id}" oninput="updateSqLaborField('${row.id}','rate',this.value)">
+          <button class="rate-lock ${row.rateOverride?'unlocked':''}" onclick="toggleSqRateOverride('${row.id}')">${row.rateOverride?'&#9998; Edit':'&#128274;'}</button>
+        </div>
+      </td>
+      <td class="line-total ${nc?'nc-total':''}">${nc?'<span class="nc-badge">N/C</span>':formatCurrency(total)}</td>
+      <td class="center"><input type="checkbox" title="No Charge" ${nc?'checked':''} onchange="updateSqLaborField('${row.id}','noCharge',this.checked)"></td>
+      <td><button class="btn btn-danger btn-icon btn-sm" onclick="removeSchoolLaborRow('${row.id}')">&#x2715;</button></td>
+    </tr>`;
+  });
+  calcSchoolTotals();
+}
+
+function updateSqLaborField(id, field, value) {
+  const row = currentSchoolQuote.laborLines.find(r=>r.id===id);
+  if(!row) return;
+  if(field==='noCharge') row.noCharge=!!value;
+  else if(field==='hours'||field==='rate') row[field]=parseFloat(value)||0;
+  else row[field]=value;
+  _sqDirty=true; calcSchoolTotals();
+  const tr=document.querySelector(`tr[data-slid="${id}"]`);
+  if(tr) {
+    const nc=!!row.noCharge;
+    const total=(parseFloat(row.hours)||0)*(parseFloat(row.rate)||0);
+    const cell=tr.querySelector('.line-total');
+    tr.classList.toggle('labor-nc-row',nc); cell.classList.toggle('nc-total',nc);
+    cell.innerHTML=nc?'<span class="nc-badge">N/C</span>':formatCurrency(total);
+  }
+}
+
+function toggleSqRateOverride(id) {
+  const row = currentSchoolQuote.laborLines.find(r=>r.id===id);
+  if(!row) return;
+  row.rateOverride=!row.rateOverride;
+  if(!row.rateOverride) row.rate=currentSchoolQuote.hourlyRate||0;
+  renderSchoolLaborRows(); _sqDirty=true;
+}
+
+function removeSchoolLaborRow(id) {
+  currentSchoolQuote.laborLines=currentSchoolQuote.laborLines.filter(r=>r.id!==id);
+  renderSchoolLaborRows(); _sqDirty=true;
+}
+
+// ── MATERIALS ──
+function addSchoolMaterialRow() {
+  if(!currentSchoolQuote) return;
+  const markup = currentSchoolQuote.markup||0;
+  const row = { id:uid(), type:'select', partId:'', description:'', qty:1, cost:0, markup, sellPrice:0 };
+  currentSchoolQuote.materialLines.push(row);
+  renderSchoolMaterialRows(); _sqDirty=true;
+}
+
+function renderSchoolMaterialRows() {
+  const tbody = document.getElementById('sq-material-rows');
+  if(!tbody) return;
+  if(!currentSchoolQuote || !currentSchoolQuote.materialLines.length) {
+    tbody.innerHTML='<tr><td colspan="7" class="text-center text-muted" style="padding:20px">No materials yet.</td></tr>';
+    calcSchoolTotals(); return;
+  }
+  tbody.innerHTML='';
+  const flatMarkup = currentSchoolQuote.markup||0;
+  const partOptions = (settings.commonParts||[]).map(p=>`<option value="${p.id}">${escHtml(p.name)}</option>`).join('');
+  currentSchoolQuote.materialLines.forEach(row => {
+    row.markup = flatMarkup;
+    row.sellPrice = (parseFloat(row.cost)||0)*(1+flatMarkup/100);
+    const lineTotal=(parseFloat(row.qty)||1)*(parseFloat(row.sellPrice)||0);
+    tbody.innerHTML+=`
+    <tr data-smid="${row.id}">
+      <td>
+        <div class="part-type-row">
+          <label><input type="radio" name="sqmtype_${row.id}" value="select" ${row.type!=='free'?'checked':''} onchange="setSqMatType('${row.id}','select')"> Common Part</label>
+          <label><input type="radio" name="sqmtype_${row.id}" value="free" ${row.type==='free'?'checked':''} onchange="setSqMatType('${row.id}','free')"> Freeform</label>
+        </div>
+        ${row.type==='free'
+          ? `<input type="text" value="${escHtml(row.description)}" placeholder="Describe part..." oninput="updateSqMatField('${row.id}','description',this.value)">`
+          : `<select onchange="updateSqMatField('${row.id}','partId',this.value)"><option value="">-- Select Part --</option>${partOptions}</select>`
+        }
+      </td>
+      <td><input type="number" value="${row.qty}" min="1" step="1" style="text-align:right;width:60px" oninput="updateSqMatField('${row.id}','qty',this.value)"></td>
+      <td><input type="number" value="${(parseFloat(row.cost)||0).toFixed(2)}" min="0" step="0.01" style="text-align:right" oninput="updateSqMatField('${row.id}','cost',this.value)" placeholder="0.00"></td>
+      <td style="text-align:right;color:var(--gray-600);font-size:13px">${flatMarkup}%&nbsp;<em style="font-size:11px;color:var(--gray-400)">(school)</em></td>
+      <td style="text-align:right;font-weight:600;color:var(--navy)" id="sqsp-${row.id}">${formatCurrency(row.sellPrice)}</td>
+      <td class="line-total" id="sqlt-${row.id}">${formatCurrency(lineTotal)}</td>
+      <td><button class="btn btn-danger btn-icon btn-sm" onclick="removeSchoolMaterialRow('${row.id}')">&#x2715;</button></td>
+    </tr>`;
+  });
+  calcSchoolTotals();
+}
+
+function setSqMatType(id, type) {
+  const row=currentSchoolQuote.materialLines.find(r=>r.id===id);
+  if(!row) return;
+  row.type=type;
+  if(type==='select') row.description=''; else row.partId='';
+  renderSchoolMaterialRows(); _sqDirty=true;
+}
+
+function updateSqMatField(id, field, value) {
+  const row=currentSchoolQuote.materialLines.find(r=>r.id===id);
+  if(!row) return;
+  const flatMarkup=currentSchoolQuote.markup||0;
+  if(field==='partId') {
+    row.partId=value;
+    const p=(settings.commonParts||[]).find(x=>x.id===value);
+    row.description=p?p.name:'';
+  } else if(field==='qty') {
+    row.qty=parseFloat(value)||1;
+  } else if(field==='cost') {
+    row.cost=parseFloat(value)||0;
+  } else {
+    row[field]=value;
+  }
+  row.markup=flatMarkup;
+  row.sellPrice=(parseFloat(row.cost)||0)*(1+flatMarkup/100);
+  const spEl=document.getElementById('sqsp-'+id);
+  if(spEl) spEl.textContent=formatCurrency(row.sellPrice);
+  const lineTotal=(parseFloat(row.qty)||1)*(parseFloat(row.sellPrice)||0);
+  const ltEl=document.getElementById('sqlt-'+id);
+  if(ltEl) ltEl.textContent=formatCurrency(lineTotal);
+  _sqDirty=true; calcSchoolTotals();
+}
+
+function removeSchoolMaterialRow(id) {
+  currentSchoolQuote.materialLines=currentSchoolQuote.materialLines.filter(r=>r.id!==id);
+  renderSchoolMaterialRows(); _sqDirty=true;
+}
+
+// ── MISC ──
+function addSchoolMiscRow() {
+  if(!currentSchoolQuote) return;
+  currentSchoolQuote.miscLines.push({id:uid(),description:'',qty:1,unitPrice:0,noCharge:false});
+  renderSchoolMiscRows(); _sqDirty=true;
+}
+
+function renderSchoolMiscRows() {
+  const tbody=document.getElementById('sq-misc-rows');
+  if(!tbody) return;
+  if(!currentSchoolQuote||!currentSchoolQuote.miscLines.length) {
+    tbody.innerHTML='<tr><td colspan="6" class="text-center text-muted" style="padding:20px">No misc items.</td></tr>';
+    calcSchoolTotals(); return;
+  }
+  tbody.innerHTML='';
+  currentSchoolQuote.miscLines.forEach(row=>{
+    const nc=!!row.noCharge;
+    const total=(parseFloat(row.qty)||1)*(parseFloat(row.unitPrice)||0);
+    tbody.innerHTML+=`
+    <tr data-sqmiscid="${row.id}" ${nc?'class="labor-nc-row"':''}>
+      <td><input type="text" value="${escHtml(row.description)}" placeholder="Description..." oninput="updateSqMiscField('${row.id}','description',this.value)"></td>
+      <td><input type="number" value="${row.qty}" min="1" step="1" style="text-align:right;width:70px" oninput="updateSqMiscField('${row.id}','qty',this.value)"></td>
+      <td><input type="number" value="${(parseFloat(row.unitPrice)||0).toFixed(2)}" min="0" step="0.01" style="text-align:right" oninput="updateSqMiscField('${row.id}','unitPrice',this.value)"></td>
+      <td class="line-total ${nc?'nc-total':''}" id="sqml-${row.id}">${nc?'<span class="nc-badge">N/C</span>':formatCurrency(total)}</td>
+      <td class="center"><input type="checkbox" ${nc?'checked':''} onchange="updateSqMiscField('${row.id}','noCharge',this.checked)"></td>
+      <td><button class="btn btn-danger btn-icon btn-sm" onclick="removeSchoolMiscRow('${row.id}')">&#x2715;</button></td>
+    </tr>`;
+  });
+  calcSchoolTotals();
+}
+
+function updateSqMiscField(id,field,value) {
+  const row=currentSchoolQuote.miscLines.find(r=>r.id===id);
+  if(!row) return;
+  if(field==='noCharge') row.noCharge=!!value;
+  else if(field==='qty'||field==='unitPrice') row[field]=parseFloat(value)||0;
+  else row[field]=value;
+  _sqDirty=true; calcSchoolTotals();
+  const tr=document.querySelector(`tr[data-sqmiscid="${id}"]`);
+  if(tr){
+    const nc=!!row.noCharge;
+    const total=(parseFloat(row.qty)||1)*(parseFloat(row.unitPrice)||0);
+    const cell=tr.querySelector('.line-total');
+    tr.classList.toggle('labor-nc-row',nc); cell.classList.toggle('nc-total',nc);
+    cell.innerHTML=nc?'<span class="nc-badge">N/C</span>':formatCurrency(total);
+  }
+}
+
+function removeSchoolMiscRow(id) {
+  currentSchoolQuote.miscLines=currentSchoolQuote.miscLines.filter(r=>r.id!==id);
+  renderSchoolMiscRows(); _sqDirty=true;
+}
+
+// ── TOTALS ──
+function calcSchoolTotals() {
+  if(!currentSchoolQuote) return;
+  const lt=currentSchoolQuote.laborLines.reduce((s,r)=>r.noCharge?s:s+(parseFloat(r.hours)||0)*(parseFloat(r.rate)||0),0);
+  const mt=currentSchoolQuote.materialLines.reduce((s,r)=>s+(parseFloat(r.qty)||1)*(parseFloat(r.sellPrice)||0),0);
+  const mist=currentSchoolQuote.miscLines.reduce((s,r)=>r.noCharge?s:s+(parseFloat(r.qty)||1)*(parseFloat(r.unitPrice)||0),0);
+  const grand=lt+mt+mist;
+  ['sq-tot-labor','sq-tot-materials','sq-tot-misc','sq-tot-grand'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    if(el) el.textContent=formatCurrency([lt,mt,mist,grand][i]);
+  });
+}
+
+// ── SAVE ──
+async function saveSchoolQuote(silent=false) {
+  if(!currentSchoolQuote) return;
+  currentSchoolQuote.number           = document.getElementById('sq-number').value.trim();
+  currentSchoolQuote.customer.name    = document.getElementById('sq-cust-name').value;
+  currentSchoolQuote.customer.custNum = document.getElementById('sq-cust-num').value;
+  currentSchoolQuote.customer.phone   = document.getElementById('sq-cust-phone').value;
+  currentSchoolQuote.customer.email   = document.getElementById('sq-cust-email').value;
+  currentSchoolQuote.customer.address = document.getElementById('sq-cust-addr').value;
+  currentSchoolQuote.description      = document.getElementById('sq-description').value;
+  currentSchoolQuote.notes            = document.getElementById('sq-notes').value;
+  currentSchoolQuote.internalNotes    = document.getElementById('sq-internal').value;
+  currentSchoolQuote.unit = {
+    make:   document.getElementById('sq-unit-make').value||'',
+    model:  document.getElementById('sq-unit-model').value||'',
+    serial: document.getElementById('sq-unit-serial').value||'',
+    id:     document.getElementById('sq-unit-id').value||''
+  };
+  const lt=currentSchoolQuote.laborLines.reduce((s,r)=>r.noCharge?s:s+(parseFloat(r.hours)||0)*(parseFloat(r.rate)||0),0);
+  const mt=currentSchoolQuote.materialLines.reduce((s,r)=>s+(parseFloat(r.qty)||1)*(parseFloat(r.sellPrice)||0),0);
+  const mist=currentSchoolQuote.miscLines.reduce((s,r)=>r.noCharge?s:s+(parseFloat(r.qty)||1)*(parseFloat(r.unitPrice)||0),0);
+  currentSchoolQuote.laborTotal=lt; currentSchoolQuote.matTotal=mt;
+  currentSchoolQuote.miscTotal=mist; currentSchoolQuote.grandTotal=lt+mt+mist;
+  currentSchoolQuote.savedAt=new Date().toISOString();
+  await DB.saveSchoolQuote(currentSchoolQuote);
+  _sqDirty=false;
+  if(!silent) toast('School quote saved!','success');
+}
+
+// ── PREVIEW / PRINT ──
+async function previewSchoolQuote() {
+  await saveSchoolQuote();
+  document.getElementById('print-view').innerHTML = _buildSchoolPrintBodyHTML(currentSchoolQuote, settings);
+  window.print();
+}
+
+async function generateSchoolProposal() {
+  await saveSchoolQuote();
+  const q=currentSchoolQuote; const s=settings;
+  const bodyHTML=_buildSchoolPrintBodyHTML(q,s);
+  const win=window.open('','_blank');
+  if(!win){toast('Pop-up blocked.','error');return;}
+  _writeProposalWindow(win, q, bodyHTML, 'School Quote');
+}
+
+function _sqTotals(q) {
+  const lt=q.laborLines.reduce((s,r)=>r.noCharge?s:s+(parseFloat(r.hours)||0)*(parseFloat(r.rate)||0),0);
+  const mt=q.materialLines.reduce((s,r)=>s+(parseFloat(r.qty)||1)*(parseFloat(r.sellPrice)||0),0);
+  const mist=q.miscLines.reduce((s,r)=>r.noCharge?s:s+(parseFloat(r.qty)||1)*(parseFloat(r.unitPrice)||0),0);
+  return {lt,mt,mist,grand:lt+mt+mist};
+}
+
+function _buildSchoolPrintBodyHTML(q,s) {
+  const co=s.company||{};
+  const {lt,mt,mist,grand}=_sqTotals(q);
+  const cats=s.schoolLaborCategories||[];
+  let laborHTML='';
+  if(q.laborLines.length){
+    laborHTML=`<div class="pv-section"><div class="pv-section-title">Labor</div><table class="pv-table">
+      <thead><tr><th>Category</th><th>Description</th><th class="right">Hours</th><th class="right">Rate/Hr</th><th class="right">Total</th></tr></thead>
+      <tbody>${q.laborLines.map(r=>{
+        const cat=cats.find(c=>c.id===r.categoryId);
+        const nc=!!r.noCharge; const tot=(parseFloat(r.hours)||0)*(parseFloat(r.rate)||0);
+        return `<tr ${nc?'style="opacity:.7"':''}><td>${escHtml(cat?.name||'--')}</td><td>${escHtml(r.description||'--')}</td>
+          <td class="right">${r.hours}</td><td class="right">${formatCurrency(r.rate)}</td>
+          <td class="right">${nc?'<span style="font-weight:700;color:#888;">N/C</span>':formatCurrency(tot)}</td></tr>`;
+      }).join('')}</tbody>
+      <tfoot><tr><td colspan="4" class="right fw-bold">Labor Subtotal</td><td class="right fw-bold">${formatCurrency(lt)}</td></tr></tfoot>
+    </table></div>`;
+  }
+  let matHTML='';
+  if(q.materialLines.length){
+    matHTML=`<div class="pv-section"><div class="pv-section-title">Materials &amp; Parts</div><table class="pv-table">
+      <thead><tr><th>Description</th><th class="right">Qty</th><th class="right">Unit Price</th><th class="right">Total</th></tr></thead>
+      <tbody>${q.materialLines.map(r=>{
+        let desc=r.description;
+        if(!desc&&r.partId){const p=(s.commonParts||[]).find(x=>x.id===r.partId);desc=p?.name||'';}
+        const tot=(parseFloat(r.qty)||1)*(parseFloat(r.sellPrice)||0);
+        return `<tr><td>${escHtml(desc||'--')}</td><td class="right">${r.qty}</td><td class="right">${formatCurrency(r.sellPrice)}</td><td class="right">${formatCurrency(tot)}</td></tr>`;
+      }).join('')}</tbody>
+      <tfoot><tr><td colspan="3" class="right fw-bold">Materials Subtotal</td><td class="right fw-bold">${formatCurrency(mt)}</td></tr></tfoot>
+    </table></div>`;
+  }
+  let miscHTML='';
+  if(q.miscLines.length){
+    miscHTML=`<div class="pv-section"><div class="pv-section-title">Miscellaneous</div><table class="pv-table">
+      <thead><tr><th>Description</th><th class="right">Qty</th><th class="right">Unit Price</th><th class="right">Total</th></tr></thead>
+      <tbody>${q.miscLines.map(r=>{
+        const nc=!!r.noCharge; const tot=(parseFloat(r.qty)||1)*(parseFloat(r.unitPrice)||0);
+        return `<tr ${nc?'style="opacity:.7"':''}><td>${escHtml(r.description||'--')}</td><td class="right">${r.qty}</td><td class="right">${formatCurrency(r.unitPrice)}</td><td class="right" ${nc?'style="font-weight:700;color:#888;"':''}>${nc?'N/C':formatCurrency(tot)}</td></tr>`;
+      }).join('')}</tbody>
+      <tfoot><tr><td colspan="3" class="right fw-bold">Misc Subtotal</td><td class="right fw-bold">${formatCurrency(mist)}</td></tr></tfoot>
+    </table></div>`;
+  }
+  const notesHTML=q.notes?`<div class="pv-section pv-notes-box"><div class="pv-section-title">Terms &amp; Notes</div><div class="pv-notes">${escHtml(q.notes)}</div></div>`:'';
+  const descHTML=q.description?`<div class="pv-section pv-desc-section"><div class="pv-section-title">Description of Work</div><div style="padding:8px 14px;font-size:12px;color:#1a2340;line-height:1.7;">${escHtml(q.description)}</div></div>`:'';
+  const u=q.unit||{};
+  const unitHTML=`<div class="pv-unit-block"><h3>Unit Information</h3><div class="pv-unit-grid">
+    <div class="pv-unit-item"><span>Make</span><strong>${escHtml(u.make||'--')}</strong></div>
+    <div class="pv-unit-item"><span>Model</span><strong>${escHtml(u.model||'--')}</strong></div>
+    <div class="pv-unit-item"><span>Serial #</span><strong>${escHtml(u.serial||'--')}</strong></div>
+    <div class="pv-unit-item"><span>Unit ID</span><strong>${escHtml(u.id||'--')}</strong></div>
+  </div></div>`;
+  const coHTML=(co.address?`<span><span class="ci-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="#3a4a6b"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/></svg></span><span class="ci-text">${escHtml(co.address)}</span></span>`:'')
+    +(co.phone?`<span><span class="ci-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="#3a4a6b"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg></span><span class="ci-text">${escHtml(co.phone)}</span></span>`:'')
+    +(co.email?`<span><span class="ci-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="#3a4a6b"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></span><span class="ci-text">${escHtml(co.email)}</span></span>`:'');
+  return `
+    <div class="pv-header">
+      <div class="pv-logo-block"><img src="${LOGO_IMG}" alt="Mico Cooling" class="pv-logo"><div class="pv-company-info">${coHTML}</div></div>
+      <div class="pv-totals-top">
+        <div class="pv-totals-header">Total Estimate<strong>${formatCurrency(grand)}</strong></div>
+        <div class="pv-totals-breakdown">
+          ${lt>0?`<div class="pv-total-row sub"><span>Labor</span><span>${formatCurrency(lt)}</span></div>`:''}
+          ${mt>0?`<div class="pv-total-row sub"><span>Materials</span><span>${formatCurrency(mt)}</span></div>`:''}
+          ${mist>0?`<div class="pv-total-row sub"><span>Misc</span><span>${formatCurrency(mist)}</span></div>`:''}
+        </div>
+      </div>
+      <div class="pv-quote-info"><div class="pv-quote-box">
+        <div class="pv-quote-date">${formatDate(new Date(q.date+'T00:00:00'))}</div>
+        <div class="pv-quote-num" style="margin-top:8px;">Quote #<strong>${escHtml(q.number||'--')}</strong></div>
+        ${q.schoolCatName?`<div class="pv-quote-custnum"><span>School</span><strong>${escHtml(q.schoolCatName)}</strong></div>`:''}
+        ${q.customer?.custNum?`<div class="pv-quote-custnum"><span>Customer #</span><strong>${escHtml(q.customer.custNum)}</strong></div>`:''}
+      </div></div>
+    </div>
+    <div class="pv-bill-unit-row">
+      <div class="pv-customer-block"><h3>Service Location</h3><p>
+        <strong>${escHtml(q.customer.name||'--')}</strong><br>
+        ${q.customer.address?escHtml(q.customer.address)+'<br>':''}
+        ${q.customer.phone?escHtml(q.customer.phone)+'<br>':''}
+        ${q.customer.email?escHtml(q.customer.email):''}
+      </p></div>
+      ${unitHTML}
+    </div>
+    ${descHTML}${laborHTML}${matHTML}${miscHTML}
+    <div class="pv-notes-sig-row">
+      ${notesHTML||'<div class="pv-section pv-notes-box" style="display:none"></div>'}
+      <div class="pv-signature">
+        <div class="pv-sig-block"><div class="pv-sig-line"></div><div class="pv-sig-label">Customer Signature</div></div>
+        <div class="pv-sig-block"><div class="pv-sig-line"></div><div class="pv-sig-label">Date Accepted</div></div>
+      </div>
+    </div>`;
+}
+
+function _writeProposalWindow(win, q, bodyHTML, title) {
+  win.document.write(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>${escHtml(title)} -- ${escHtml(q.customer?.name||'Quote')} #${escHtml(q.number||'')}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{--navy:#0d2247;--navy-deep:#0b1526;--navy-mid:#1a3a6b;}
+body{font-family:'Segoe UI',system-ui,sans-serif;color:#1a2340;background:#f6f8fb;}
+.proposal-toolbar{position:sticky;top:0;z-index:100;background:linear-gradient(90deg,#0b1526 0%,#0d2247 60%,#1a3a6b 100%);padding:12px 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(0,0,0,.25);}
+.proposal-toolbar-title{color:rgba(255,255,255,.7);font-size:13px;font-weight:600;}
+.proposal-toolbar-btns{display:flex;gap:10px;}
+.tb-btn{border:none;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;}
+.tb-btn:hover{opacity:.88;}
+.tb-btn-print{background:#c8a94a;color:#0b1526;}
+.tb-btn-close{background:rgba(255,255,255,.12);color:white;border:1px solid rgba(255,255,255,.2);}
+.proposal-body{max-width:900px;margin:28px auto;padding:28px 20px 48px;}
+.pv-header{display:flex;justify-content:space-between;align-items:stretch;margin-bottom:10px;padding-bottom:10px;border-bottom:4px solid var(--navy);gap:16px;}
+.pv-logo-block{display:flex;flex-direction:column;align-items:flex-start;gap:8px;background:linear-gradient(135deg,#dde3ef 0%,#e8ecf5 100%);border:1px solid #bcc7d8;border-radius:10px;padding:12px 18px 14px;box-shadow:0 4px 14px rgba(13,34,71,.15);flex:1;}
+.pv-logo{height:110px;width:auto;max-width:280px;object-fit:contain;object-position:left;display:block;}
+.pv-company-info{font-size:11px;color:#3a4a6b;display:table;border-spacing:0 4px;}
+.pv-company-info span{display:table-row;}
+.pv-company-info span .ci-icon{display:table-cell;width:18px;text-align:center;padding-right:5px;}
+.pv-company-info span .ci-text{display:table-cell;vertical-align:middle;}
+.pv-quote-info{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-start;align-self:stretch;}
+.pv-quote-box{text-align:right;background:linear-gradient(135deg,#dde3ef 0%,#e8ecf5 100%);border:1px solid #bcc7d8;border-radius:10px;padding:12px 18px 14px;box-shadow:0 4px 14px rgba(13,34,71,.15);height:100%;}
+.pv-quote-date{font-size:9.5px;color:#8a9ab5;font-weight:800;text-transform:uppercase;letter-spacing:1px;}
+.pv-quote-num{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#8a9ab5;font-weight:800;}
+.pv-quote-num strong{display:block;font-size:28px;font-weight:900;color:var(--navy);letter-spacing:-1px;margin-top:2px;line-height:1;}
+.pv-quote-custnum{margin-top:10px;padding-top:10px;border-top:1px solid #bcc7d8;}
+.pv-quote-custnum span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#8a9ab5;font-weight:800;margin-bottom:2px;}
+.pv-quote-custnum strong{font-size:14px;font-weight:800;color:var(--navy);}
+.pv-bill-unit-row{display:flex;gap:10px;margin-bottom:10px;align-items:stretch;}
+.pv-customer-block,.pv-unit-block{flex:1;background:linear-gradient(135deg,#dde3ef 0%,#e8ecf5 100%);border-radius:10px;padding:12px 18px;border:1px solid #bcc7d8;box-shadow:0 4px 14px rgba(13,34,71,.15);}
+.pv-customer-block h3,.pv-unit-block h3{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#8a9ab5;margin-bottom:6px;font-weight:800;}
+.pv-customer-block p{font-size:12px;line-height:1.7;color:#1a2340;margin:0;}
+.pv-unit-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;}
+.pv-unit-item span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:#8a9ab5;font-weight:800;margin-bottom:1px;}
+.pv-unit-item strong{font-size:14px;font-weight:700;color:var(--navy);}
+.pv-section{margin-bottom:10px;border:1px solid #bcc7d8;border-radius:10px;overflow:hidden;box-shadow:0 4px 14px rgba(13,34,71,.15);background:linear-gradient(135deg,#dde3ef 0%,#e8ecf5 100%);}
+.pv-section-title{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:white;background:linear-gradient(90deg,#0b1526 0%,var(--navy) 50%,#1a3a6b 100%);margin:0;padding:8px 14px;}
+.pv-table{width:100%;border-collapse:collapse;font-size:12px;margin:0;}
+.pv-table th{background:rgba(13,34,71,.12);color:var(--navy);padding:6px 12px;text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.7px;font-weight:800;border-bottom:1.5px solid #bcc7d8;}
+.pv-table th.right{text-align:right;}
+.pv-table td{padding:7px 12px;border-bottom:1px solid rgba(188,199,216,.5);color:#1a2340;font-size:12px;background:rgba(255,255,255,.55);}
+.pv-table tr:nth-child(even) td{background:rgba(255,255,255,.35);}
+.pv-table td.right{text-align:right;}
+.pv-table tfoot td{font-weight:800;background:rgba(13,34,71,.12);border-top:1.5px solid #bcc7d8;padding:8px 12px;color:var(--navy);font-size:12px;}
+.pv-table tfoot td.right{text-align:right;}
+.pv-totals-top{background:linear-gradient(135deg,#dde3ef 0%,#e8ecf5 100%);border:1px solid #bcc7d8;border-radius:10px;padding:12px 18px 14px;box-shadow:0 4px 14px rgba(13,34,71,.15);width:280px;}
+.pv-totals-header{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#8a9ab5;font-weight:800;text-align:center;}
+.pv-totals-header strong{display:block;font-size:32px;font-weight:900;color:var(--navy);letter-spacing:-1px;margin-top:3px;line-height:1;text-align:center;}
+.pv-totals-breakdown{margin-top:12px;padding-top:12px;border-top:1px solid #bcc7d8;display:flex;flex-direction:column;gap:5px;}
+.pv-totals-top .pv-total-row{display:flex;justify-content:space-between;font-size:12.5px;background:transparent;}
+.pv-totals-top .pv-total-row.sub{color:#3a4a6b;background:transparent;}
+.pv-notes-sig-row{display:flex;gap:10px;margin-bottom:10px;align-items:stretch;}
+.pv-notes-box{flex:1.4;margin-bottom:0!important;}
+.pv-notes-box .pv-notes{padding:8px 14px;font-size:10.5px;line-height:1.7;color:#3a4a6b;}
+.pv-signature{flex:1;display:flex;flex-direction:column;gap:14px;justify-content:center;background:linear-gradient(135deg,#dde3ef 0%,#e8ecf5 100%);border:1px solid #bcc7d8;border-radius:10px;padding:14px 18px;box-shadow:0 4px 14px rgba(13,34,71,.15);}
+.pv-sig-block{flex:1;}
+.pv-sig-line{border-bottom:1.5px solid var(--navy);margin-top:22px;margin-bottom:5px;}
+.pv-sig-label{font-size:9.5px;color:#8a9ab5;text-transform:uppercase;letter-spacing:.8px;font-weight:700;}
+.fw-bold{font-weight:800;}
+.desc-section{margin-bottom:10px;}
+@media print{.proposal-toolbar{display:none!important;}body{background:white;}.proposal-body{margin:0;padding:10mm 12mm;max-width:none;}.pv-section{break-inside:avoid;margin-bottom:7px!important;}.pv-table tr{break-inside:avoid;}@page{margin:6mm 10mm 8mm 10mm;}}
+</style></head><body>
+<div class="proposal-toolbar">
+  <span class="proposal-toolbar-title">${escHtml(title)} -- ${escHtml(q.customer?.name||'')}${q.number?' -- Quote #'+escHtml(q.number):''}</span>
+  <div class="proposal-toolbar-btns">
+    <button class="tb-btn tb-btn-print" onclick="window.print()">Print / Save PDF</button>
+    <button class="tb-btn tb-btn-close" onclick="window.close()">Close</button>
+  </div>
+</div>
+<div class="proposal-body">${bodyHTML}</div>
+</body></html>`);
+  win.document.close();
+}
+
+// ── SCHOOL HISTORY ──
+function _schoolHistoryCardHTML(q) {
+  const cat=(settings.schoolCategories||[]).find(c=>c.id===q.schoolCatId);
+  return `<div class="history-card draft" onclick="loadSchoolQuote('${q.id}')">
+    <div class="hc-num">WO# ${escHtml(q.number||'--')}</div>
+    <div class="hc-custnum"><span>School</span>${escHtml(cat?.name||q.schoolCatName||'--')}</div>
+    <div class="hc-customer">
+      <div class="hc-name">${escHtml(q.customer?.name||'(No name)')}</div>
+      <div class="hc-date">${q.savedAt?formatDate(new Date(q.savedAt)):'--'}</div>
+    </div>
+    <div class="hc-total">${formatCurrency(q.grandTotal||0)}</div>
+    <div class="hc-actions" onclick="event.stopPropagation()">
+      <button class="btn btn-charcoal btn-sm" onclick="loadSchoolQuote('${q.id}')">Open</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteSchoolQuote('${q.id}')">Delete</button>
+    </div>
+  </div>`;
+}
+
+async function renderSchoolHistory() {
+  const el=document.getElementById('sq-history-list');
+  el.innerHTML='<div class="empty-state"><div class="empty-icon">&#128203;</div><p>Loading...</p></div>';
+  schoolQuotes=await DB.getSchoolQuotes();
+  const se=document.getElementById('sq-history-search'); if(se) se.value='';
+  if(!schoolQuotes.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">&#128203;</div><p>No school quotes yet.</p></div>';return;}
+  el.innerHTML=schoolQuotes.map(_schoolHistoryCardHTML).join('');
+}
+
+function filterSchoolHistory() {
+  const term=(document.getElementById('sq-history-search').value||'').toLowerCase().trim();
+  const el=document.getElementById('sq-history-list');
+  if(!schoolQuotes.length) return;
+  if(!term){el.innerHTML=schoolQuotes.map(_schoolHistoryCardHTML).join('');return;}
+  const filtered=schoolQuotes.filter(q=>{
+    return (q.number||'').toLowerCase().includes(term)
+        ||(q.schoolCatName||'').toLowerCase().includes(term)
+        ||(q.customer?.name||'').toLowerCase().includes(term)
+        ||formatCurrency(q.grandTotal||0).toLowerCase().includes(term);
+  });
+  el.innerHTML=filtered.length?filtered.map(_schoolHistoryCardHTML).join('')
+    :'<div class="empty-state"><div class="empty-icon">&#128269;</div><p>No quotes match.</p></div>';
+}
+
+function loadSchoolQuote(id) {
+  const q=schoolQuotes.find(x=>x.id===id);
+  if(!q) return;
+  currentSchoolQuote=JSON.parse(JSON.stringify(q));
+  document.getElementById('sq-number').value=q.number||'';
+  document.getElementById('sq-cust-name').value=q.customer?.name||'';
+  document.getElementById('sq-cust-num').value=q.customer?.custNum||'';
+  document.getElementById('sq-cust-phone').value=q.customer?.phone||'';
+  document.getElementById('sq-cust-email').value=q.customer?.email||'';
+  document.getElementById('sq-cust-addr').value=q.customer?.address||'';
+  document.getElementById('sq-unit-make').value=q.unit?.make||'';
+  document.getElementById('sq-unit-model').value=q.unit?.model||'';
+  document.getElementById('sq-unit-serial').value=q.unit?.serial||'';
+  document.getElementById('sq-unit-id').value=q.unit?.id||'';
+  document.getElementById('sq-description').value=q.description||'';
+  document.getElementById('sq-notes').value=q.notes||'';
+  document.getElementById('sq-internal').value=q.internalNotes||'';
+  const sqDate=document.getElementById('sq-date');
+  if(sqDate) sqDate.textContent=q.savedAt?formatDate(new Date(q.savedAt)):formatDate(new Date());
+  populateSchoolCatDropdown();
+  renderSchoolLaborRows(); renderSchoolMaterialRows(); renderSchoolMiscRows(); calcSchoolTotals();
+  _sqDirty=false; showPage('school');
+  toast('School quote loaded: WO# '+(q.number||'(no number)'),'success');
+}
+
+function deleteSchoolQuote(id) {
+  confirmAction('Delete School Quote','Permanently delete this school quote?',async()=>{
+    await DB.deleteSchoolQuote(id);
+    renderSchoolHistory();
+    toast('School quote deleted.');
+  });
+}
+
+// ── SCHOOL ADMIN ──
+function renderSchoolCats() {
+  const tbody=document.getElementById('sc-rows');
+  if(!tbody) return;
+  tbody.innerHTML='';
+  (settings.schoolCategories||[]).forEach(sc=>{
+    tbody.innerHTML+=`<tr>
+      <td><input type="text" value="${escHtml(sc.name)}" onchange="updateSchoolCat('${sc.id}','name',this.value)" style="width:200px"></td>
+      <td><input type="number" value="${parseFloat(sc.hourlyRate)||0}" min="0" step="0.01" style="text-align:right;width:120px" onchange="updateSchoolCat('${sc.id}','hourlyRate',parseFloat(this.value)||0)"></td>
+      <td><input type="number" value="${parseFloat(sc.markup)||0}" min="0" step="0.1" style="text-align:right;width:100px" onchange="updateSchoolCat('${sc.id}','markup',parseFloat(this.value)||0)"></td>
+      <td style="text-align:center"><button class="btn btn-danger btn-sm" onclick="deleteSchoolCat('${sc.id}')">Delete</button></td>
+    </tr>`;
+  });
+}
+
+function addSchoolCat() {
+  const name=(document.getElementById('sc-new-name').value||'').trim();
+  const rate=parseFloat(document.getElementById('sc-new-rate').value)||0;
+  const markup=parseFloat(document.getElementById('sc-new-markup').value)||0;
+  if(!name){toast('Enter a school name.','error');return;}
+  settings.schoolCategories=settings.schoolCategories||[];
+  settings.schoolCategories.push({id:'sc_'+Date.now(),name,hourlyRate:rate,markup});
+  DB.saveSettings(settings);
+  document.getElementById('sc-new-name').value='';
+  document.getElementById('sc-new-rate').value='';
+  document.getElementById('sc-new-markup').value='';
+  renderSchoolCats(); populateSchoolCatDropdown();
+  toast('School category added!','success');
+}
+
+function updateSchoolCat(id,field,value) {
+  const sc=(settings.schoolCategories||[]).find(c=>c.id===id);
+  if(!sc) return;
+  sc[field]=value; DB.saveSettings(settings);
+  if(field==='hourlyRate'||field==='markup') populateSchoolCatDropdown();
+  toast('Saved.','success');
+}
+
+function deleteSchoolCat(id) {
+  confirmAction('Delete School Category','Delete this school category?',()=>{
+    settings.schoolCategories=(settings.schoolCategories||[]).filter(c=>c.id!==id);
+    DB.saveSettings(settings); renderSchoolCats(); populateSchoolCatDropdown();
+    toast('Deleted.','success');
+  });
+}
+
+function renderSchoolLaborCats() {
+  const tbody=document.getElementById('slc-rows');
+  if(!tbody) return;
+  tbody.innerHTML='';
+  (settings.schoolLaborCategories||[]).forEach(lc=>{
+    tbody.innerHTML+=`<tr>
+      <td><input type="text" value="${escHtml(lc.name)}" onchange="updateSchoolLaborCat('${lc.id}',this.value)" style="width:280px"></td>
+      <td style="text-align:center"><button class="btn btn-danger btn-sm" onclick="deleteSchoolLaborCat('${lc.id}')">Delete</button></td>
+    </tr>`;
+  });
+}
+
+function addSchoolLaborCat() {
+  const name=(document.getElementById('slc-new-name').value||'').trim();
+  if(!name){toast('Enter a category name.','error');return;}
+  settings.schoolLaborCategories=settings.schoolLaborCategories||[];
+  settings.schoolLaborCategories.push({id:'slc_'+Date.now(),name});
+  DB.saveSettings(settings);
+  document.getElementById('slc-new-name').value='';
+  renderSchoolLaborCats(); toast('School labor category added!','success');
+}
+
+function updateSchoolLaborCat(id,name) {
+  const lc=(settings.schoolLaborCategories||[]).find(c=>c.id===id);
+  if(lc){lc.name=name;DB.saveSettings(settings);toast('Saved.','success');}
+}
+
+function deleteSchoolLaborCat(id) {
+  confirmAction('Delete Labor Category','Delete this school labor category?',()=>{
+    settings.schoolLaborCategories=(settings.schoolLaborCategories||[]).filter(c=>c.id!==id);
+    DB.saveSettings(settings); renderSchoolLaborCats(); toast('Deleted.','success');
+  });
+}
+
 function escHtml(str) {
   if(!str) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
