@@ -129,28 +129,6 @@ html, body { height: 100%; font-family:'Inter',-apple-system,BlinkMacSystemFont,
 .page { display: none; min-height: calc(100vh - 60px); }
 .page.active { display: block; }
 
-/* ─── ADMIN LOGIN OVERLAY ──────────────────────────────────────────────────── */
-#admin-lock {
-  min-height: calc(100vh - 60px);
-  display: flex; align-items: center; justify-content: center;
-  background: var(--grad-page);
-}
-.lock-card {
-  background: white; border-radius: var(--radius-lg); padding: 44px 40px;
-  width: 360px; box-shadow: var(--shadow-lg); text-align: center;
-  border-top: 4px solid var(--navy);
-}
-.lock-card .lock-icon { font-size: 44px; margin-bottom: 16px; }
-.lock-card h2 { font-size: 22px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
-.lock-card p { color: var(--gray-500); font-size: 13px; margin-bottom: 24px; }
-.lock-card input {
-  width: 100%; padding: 12px 16px; border: 2px solid var(--silver-light);
-  border-radius: var(--radius-sm); font-size: 16px; margin-bottom: 12px;
-  text-align: center; letter-spacing: 4px; transition: border-color .15s;
-}
-.lock-card input:focus { outline: none; border-color: var(--navy-mid); box-shadow: 0 0 0 3px rgba(13,34,71,.1); }
-.lock-error { color: var(--red); font-size: 12px; margin-top: 8px; min-height: 16px; }
-
 /* ─── ADMIN LAYOUT ─────────────────────────────────────────────────────────── */
 #admin-panel { display: flex; min-height: calc(100vh - 60px); }
 #admin-sidebar {
@@ -971,20 +949,8 @@ th.center, td.center { text-align: center; }
 <!-- ════════════════ ADMIN PAGE ════════════════ -->
 <div class="page" id="admin-page">
 
-  <!-- Lock screen -->
-  <div id="admin-lock">
-    <div class="lock-card">
-      <div class="lock-icon">🔒</div>
-      <h2>Admin Access</h2>
-      <p>Enter your password to access admin settings.</p>
-      <input type="password" id="admin-pw-input" placeholder="Password" onkeydown="if(event.key==='Enter')checkAdminPw()">
-      <button class="btn btn-charcoal" style="width:100%" onclick="checkAdminPw()">Unlock Admin</button>
-      <div class="lock-error" id="pw-error"></div>
-    </div>
-  </div>
-
-  <!-- Admin Panel (hidden until unlocked) -->
-  <div id="admin-panel" style="display:none;">
+  <!-- Admin Panel -->
+  <div id="admin-panel" style="display:flex;">
     <div id="admin-sidebar">
       <div class="sidebar-section-label">General</div>
       <button class="sidebar-item active" data-section="company" onclick="showAdminSection('company',this)">
@@ -1085,25 +1051,6 @@ th.center, td.center { text-align: center; }
           <div class="quote-section-title" style="margin-bottom:14px">App Access</div>
           <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">Sign-in is handled by Google OAuth via <strong>login.micocc.net</strong>. Staff log in with their MICO Google Workspace accounts — no separate app password required.</p>
           <p style="font-size:12px;color:var(--gray-500);">Logged in as: <strong id="admin-user-email" style="color:var(--navy);">—</strong></p>
-        </div>
-        <div class="card" style="max-width:400px">
-          <div class="quote-section-title" style="margin-bottom:14px">Admin Panel Password</div>
-          <p style="font-size:13px;color:var(--gray-500);margin-bottom:14px">This is the separate password required to access these Admin settings.</p>
-          <div class="form-group" style="margin-bottom:14px">
-            <label>Current Admin Password</label>
-            <input type="password" id="sec-current" placeholder="Current admin password">
-          </div>
-          <div class="form-group" style="margin-bottom:14px">
-            <label>New Password</label>
-            <input type="password" id="sec-new" placeholder="New password">
-          </div>
-          <div class="form-group" style="margin-bottom:14px">
-            <label>Confirm New Password</label>
-            <input type="password" id="sec-confirm" placeholder="Confirm new password">
-          </div>
-          <div class="form-actions">
-            <button class="btn btn-charcoal" onclick="changePassword()">Update Password</button>
-          </div>
         </div>
       </div>
 
@@ -1589,8 +1536,6 @@ th.center, td.center { text-align: center; }
 <script>
 // ─── DEFAULTS ────────────────────────────────────────────────────────────────
 const DEFAULT_SETTINGS = {
-  appPassword: 'mico2024',
-  adminPassword: 'admin123',
   company: { name:'Mico Cooling', phone:'845-268-0300', email:'', website:'www.micocooling.com', address:'30 Ramland Road - Suite 103', license:'', tagline:'' },
   customerTypes: [
     { id:'ct_1', name:'Resq' },
@@ -1610,12 +1555,12 @@ const DEFAULT_SETTINGS = {
     'ct_2': { 'lc_1':145, 'lc_2':100, 'lc_3':145, 'lc_1776091555978':100, 'lc_1776091568227':245, 'lc_1776091576180':245 },
     'ct_3': { 'lc_1':150, 'lc_2':100, 'lc_3':150, 'lc_1776091555978':100, 'lc_1776091568227':250, 'lc_1776091576180':250 }
   },
-  schoolCategories: [
+  govCategories: [
     { id:'sc_1', name:'Yonkers',      markup:0 },
     { id:'sc_2', name:'New Rochelle', markup:0 },
     { id:'sc_3', name:'White Plains', markup:0 }
   ],
-  schoolLaborCategories: [
+  govLaborCategories: [
     { id:'slc_1', name:'Technician (Diagnostic)' },
     { id:'slc_2', name:'Helper (Diagnostic)' },
     { id:'slc_3', name:'Technician (Repair)' },
@@ -1623,7 +1568,7 @@ const DEFAULT_SETTINGS = {
     { id:'slc_5', name:'Team (Diagnostic)' },
     { id:'slc_6', name:'Team (Repair)' }
   ],
-  schoolLaborRates: {},
+  govLaborRates: {},
   markupTiers: [
     { id:'mt_1', min:0,   max:49.99,  pct:50 },
     { id:'mt_2', min:50,  max:199.99, pct:40 },
@@ -1654,7 +1599,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const DB = {
   async getSettings() {
     try {
-      const { data, error } = await sb.from('app_settings').select('data').eq('id', 1).maybeSingle();
+      const { data, error } = await sb.from('sq_settings').select('data').eq('id', 1).maybeSingle();
       if (data?.data) return data.data;
     } catch(e) { console.warn('Supabase getSettings failed:', e); }
     return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
@@ -1662,7 +1607,7 @@ const DB = {
 
   saveSettings(s) {
     setSyncing(true);
-    sb.from('app_settings')
+    sb.from('sq_settings')
       .upsert({ id: 1, data: s, updated_at: new Date().toISOString() })
       .then(({ error }) => {
         setSyncing(false);
@@ -1672,7 +1617,7 @@ const DB = {
 
   async getQuotes() {
     try {
-      const { data, error } = await sb.from('quotes').select('data').order('saved_at', { ascending: false });
+      const { data, error } = await sb.from('sq_quotes').select('data').order('saved_at', { ascending: false });
       if (data) return data.map(r => r.data);
     } catch(e) { console.warn('Supabase getQuotes failed:', e); }
     return [];
@@ -1682,7 +1627,7 @@ const DB = {
     const idx = quotes.findIndex(x => x.id === q.id);
     if (idx >= 0) quotes[idx] = q; else quotes.unshift(q);
     setSyncing(true);
-    const { error } = await sb.from('quotes').upsert({
+    const { error } = await sb.from('sq_quotes').upsert({
       id:            q.id,
       data:          q,
       wo_number:     q.number || null,
@@ -1697,13 +1642,13 @@ const DB = {
 
   async deleteQuote(id) {
     quotes = quotes.filter(q => q.id !== id);
-    const { error } = await sb.from('quotes').delete().eq('id', id);
+    const { error } = await sb.from('sq_quotes').delete().eq('id', id);
     if (error) console.warn('Supabase deleteQuote failed:', error);
   },
 
   async getSchoolQuotes() {
     try {
-      const { data, error } = await sb.from('school_quotes').select('data').order('saved_at', { ascending: false });
+      const { data, error } = await sb.from('sq_gov_quotes').select('data').order('saved_at', { ascending: false });
       if (data) return data.map(r => r.data);
     } catch(e) { console.warn('Supabase getSchoolQuotes failed:', e); }
     return [];
@@ -1713,7 +1658,7 @@ const DB = {
     const idx = schoolQuotes.findIndex(x => x.id === q.id);
     if (idx >= 0) schoolQuotes[idx] = q; else schoolQuotes.unshift(q);
     setSyncing(true);
-    const { error } = await sb.from('school_quotes').upsert({
+    const { error } = await sb.from('sq_gov_quotes').upsert({
       id:            q.id,
       data:          q,
       wo_number:     q.number || null,
@@ -1728,7 +1673,7 @@ const DB = {
 
   async deleteSchoolQuote(id) {
     schoolQuotes = schoolQuotes.filter(q => q.id !== id);
-    const { error } = await sb.from('school_quotes').delete().eq('id', id);
+    const { error } = await sb.from('sq_gov_quotes').delete().eq('id', id);
     if (error) console.warn('Supabase deleteSchoolQuote failed:', error);
   }
 };
@@ -1746,7 +1691,6 @@ let quotes = [];
 let schoolQuotes = [];
 let currentQuote = null;
 let currentSchoolQuote = null;
-let adminUnlocked = false;
 let idCounter = Date.now();
 function uid() { return 'id_' + (++idCounter); }
 
@@ -3095,29 +3039,9 @@ function deleteQuote(id) {
 
 // ─── ADMIN ────────────────────────────────────────────────────────────────────
 function initAdminPage() {
-  if(!adminUnlocked) {
-    document.getElementById('admin-lock').style.display = 'flex';
-    document.getElementById('admin-panel').style.display = 'none';
-  } else {
-    document.getElementById('admin-lock').style.display = 'none';
-    document.getElementById('admin-panel').style.display = 'flex';
-    loadAdminData();
-  }
+  loadAdminData();
 }
 
-function checkAdminPw() {
-  const input = document.getElementById('admin-pw-input').value;
-  if(input === (settings.adminPassword || 'admin123')) {
-    adminUnlocked = true;
-    document.getElementById('pw-error').textContent = '';
-    document.getElementById('admin-pw-input').value = '';
-    document.getElementById('admin-lock').style.display = 'none';
-    document.getElementById('admin-panel').style.display = 'flex';
-    loadAdminData();
-  } else {
-    document.getElementById('pw-error').textContent = 'Incorrect password. Try again.';
-  }
-}
 
 function showAdminSection(id, btn) {
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
@@ -3162,34 +3086,6 @@ function saveCompanyInfo() {
   };
   DB.saveSettings(settings);
   toast('Company info saved!', 'success');
-}
-
-// ─ Security ─
-function changeAppPassword() {
-  const nw = document.getElementById('app-pw-new').value;
-  const cf = document.getElementById('app-pw-confirm').value;
-  if(!nw) { toast('New password cannot be empty.', 'error'); return; }
-  if(nw !== cf) { toast('Passwords do not match.', 'error'); return; }
-  settings.appPassword = nw;
-  DB.saveSettings(settings);
-  document.getElementById('app-pw-new').value = '';
-  document.getElementById('app-pw-confirm').value = '';
-  toast('App password updated!', 'success');
-}
-
-function changePassword() {
-  const cur = document.getElementById('sec-current').value;
-  const nw  = document.getElementById('sec-new').value;
-  const cf  = document.getElementById('sec-confirm').value;
-  if(cur !== (settings.adminPassword || 'admin123')) { toast('Current password is incorrect.', 'error'); return; }
-  if(!nw) { toast('New password cannot be empty.', 'error'); return; }
-  if(nw !== cf) { toast('Passwords do not match.', 'error'); return; }
-  settings.adminPassword = nw;
-  DB.saveSettings(settings);
-  document.getElementById('sec-current').value = '';
-  document.getElementById('sec-new').value = '';
-  document.getElementById('sec-confirm').value = '';
-  toast('Password updated!', 'success');
 }
 
 // ─ Customer Types ─
@@ -3567,7 +3463,7 @@ function newSchoolQuote(silent) {
 function populateSchoolCatDropdown() {
   const sel = document.getElementById('sq-school-cat');
   if(!sel) return;
-  const cats = (settings.schoolCategories || []).slice().sort((a,b) => a.name.localeCompare(b.name));
+  const cats = (settings.govCategories || []).slice().sort((a,b) => a.name.localeCompare(b.name));
   sel.innerHTML = '<option value="">— Select Category —</option>' +
     cats.map(c => `<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
   if(currentSchoolQuote) sel.value = currentSchoolQuote.schoolCatId || '';
@@ -3576,7 +3472,7 @@ function populateSchoolCatDropdown() {
 function onSchoolCatChange() {
   markSchoolDirty();
   const catId = document.getElementById('sq-school-cat').value;
-  const cat = (settings.schoolCategories||[]).find(c=>c.id===catId);
+  const cat = (settings.govCategories||[]).find(c=>c.id===catId);
   if(currentSchoolQuote) {
     currentSchoolQuote.schoolCatId   = catId;
     currentSchoolQuote.schoolCatName = cat ? cat.name : '';
@@ -3606,7 +3502,7 @@ function renderSchoolLaborRows() {
     calcSchoolTotals(); return;
   }
   tbody.innerHTML = '';
-  const cats = settings.schoolLaborCategories || [];
+  const cats = settings.govLaborCategories || [];
   currentSchoolQuote.laborLines.forEach(row => {
     const nc = !!row.noCharge;
     const ot = !!row.overtime;
@@ -3901,7 +3797,7 @@ function _sqTotals(q) {
 function _buildSchoolPrintBodyHTML(q,s) {
   const co = s.company || {};
   const {lt, mt, mist, grand} = _sqTotals(q);
-  const cats = s.schoolLaborCategories || [];
+  const cats = s.govLaborCategories || [];
 
   // Labor
   let laborHTML = '';
@@ -4156,7 +4052,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;color:#1a2340;background:#f6f8f
 
 // ── SCHOOL HISTORY ──
 function _schoolHistoryCardHTML(q) {
-  const cat=(settings.schoolCategories||[]).find(c=>c.id===q.schoolCatId);
+  const cat=(settings.govCategories||[]).find(c=>c.id===q.schoolCatId);
   return `<div class="history-card draft" onclick="loadSchoolQuote('${q.id}')">
     <div class="hc-num">WO# ${escHtml(q.number||'--')}</div>
     <div class="hc-custnum"><span style="background:var(--green);color:#fff;padding:1px 7px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.3px;">Gov't</span> ${escHtml(cat?.name||q.schoolCatName||'--')}</div>
@@ -4237,7 +4133,7 @@ function renderSchoolCats() {
   const tbody=document.getElementById('sc-rows');
   if(!tbody) return;
   tbody.innerHTML='';
-  (settings.schoolCategories||[]).slice().sort((a,b) => a.name.localeCompare(b.name)).forEach(sc=>{
+  (settings.govCategories||[]).slice().sort((a,b) => a.name.localeCompare(b.name)).forEach(sc=>{
     tbody.innerHTML+=`<tr>
       <td><input type="text" value="${escHtml(sc.name)}" onchange="updateSchoolCat('${sc.id}','name',this.value)" style="width:200px"></td>
       <td><input type="number" value="${parseFloat(sc.markup)||0}" min="0" step="0.1" style="text-align:right;width:100px" onchange="updateSchoolCat('${sc.id}','markup',parseFloat(this.value)||0)"></td>
@@ -4250,8 +4146,8 @@ function addSchoolCat() {
   const name=(document.getElementById('sc-new-name').value||'').trim();
   const markup=parseFloat(document.getElementById('sc-new-markup').value)||0;
   if(!name){toast('Enter a category name.','error');return;}
-  settings.schoolCategories=settings.schoolCategories||[];
-  settings.schoolCategories.push({id:'sc_'+Date.now(),name,markup});
+  settings.govCategories=settings.govCategories||[];
+  settings.govCategories.push({id:'sc_'+Date.now(),name,markup});
   DB.saveSettings(settings);
   document.getElementById('sc-new-name').value='';
   document.getElementById('sc-new-markup').value='';
@@ -4260,7 +4156,7 @@ function addSchoolCat() {
 }
 
 function updateSchoolCat(id,field,value) {
-  const sc=(settings.schoolCategories||[]).find(c=>c.id===id);
+  const sc=(settings.govCategories||[]).find(c=>c.id===id);
   if(!sc) return;
   sc[field]=value; DB.saveSettings(settings);
   if(field==='markup') populateSchoolCatDropdown();
@@ -4269,7 +4165,7 @@ function updateSchoolCat(id,field,value) {
 
 function deleteSchoolCat(id) {
   confirmAction('Delete School Category','Delete this school category?',()=>{
-    settings.schoolCategories=(settings.schoolCategories||[]).filter(c=>c.id!==id);
+    settings.govCategories=(settings.govCategories||[]).filter(c=>c.id!==id);
     DB.saveSettings(settings); renderSchoolCats(); populateSchoolCatDropdown();
     toast('Deleted.','success');
   });
@@ -4279,7 +4175,7 @@ function renderSchoolLaborCats() {
   const tbody=document.getElementById('slc-rows');
   if(!tbody) return;
   tbody.innerHTML='';
-  const slcs = settings.schoolLaborCategories || [];
+  const slcs = settings.govLaborCategories || [];
   slcs.forEach((lc, i) => {
     tbody.innerHTML+=`<tr>
       <td><input type="text" value="${escHtml(lc.name)}" onchange="updateSchoolLaborCat('${lc.id}',this.value)" style="width:280px"></td>
@@ -4295,20 +4191,20 @@ function renderSchoolLaborCats() {
 function addSchoolLaborCat() {
   const name=(document.getElementById('slc-new-name').value||'').trim();
   if(!name){toast('Enter a category name.','error');return;}
-  settings.schoolLaborCategories=settings.schoolLaborCategories||[];
-  settings.schoolLaborCategories.push({id:'slc_'+Date.now(),name});
+  settings.govLaborCategories=settings.govLaborCategories||[];
+  settings.govLaborCategories.push({id:'slc_'+Date.now(),name});
   DB.saveSettings(settings);
   document.getElementById('slc-new-name').value='';
   renderSchoolLaborCats(); toast('School labor category added!','success');
 }
 
 function updateSchoolLaborCat(id,name) {
-  const lc=(settings.schoolLaborCategories||[]).find(c=>c.id===id);
+  const lc=(settings.govLaborCategories||[]).find(c=>c.id===id);
   if(lc){lc.name=name;DB.saveSettings(settings);toast('Saved.','success');}
 }
 
 function moveSchoolLaborCat(id, dir) {
-  const arr = settings.schoolLaborCategories || [];
+  const arr = settings.govLaborCategories || [];
   const i = arr.findIndex(c => c.id === id);
   if(i < 0) return;
   const j = i + dir;
@@ -4320,20 +4216,20 @@ function moveSchoolLaborCat(id, dir) {
 
 function deleteSchoolLaborCat(id) {
   confirmAction('Delete Labor Category','Delete this school labor category?',()=>{
-    settings.schoolLaborCategories=(settings.schoolLaborCategories||[]).filter(c=>c.id!==id);
+    settings.govLaborCategories=(settings.govLaborCategories||[]).filter(c=>c.id!==id);
     DB.saveSettings(settings); renderSchoolLaborCats(); toast('Deleted.','success');
   });
 }
 
 function getSchoolLaborRate(categoryId, schoolCatId) {
   if(!categoryId || !schoolCatId) return 0;
-  return parseFloat(settings.schoolLaborRates?.[schoolCatId]?.[categoryId] || 0);
+  return parseFloat(settings.govLaborRates?.[schoolCatId]?.[categoryId] || 0);
 }
 
 function renderSchoolLaborRateMatrix() {
-  const cts = settings.schoolCategories || [];
-  const lcs = settings.schoolLaborCategories || [];
-  const rates = settings.schoolLaborRates || {};
+  const cts = settings.govCategories || [];
+  const lcs = settings.govLaborCategories || [];
+  const rates = settings.govLaborRates || {};
   if(!cts.length || !lcs.length) {
     document.getElementById('school-labor-rate-matrix').innerHTML = '<p class="text-muted" style="padding:16px">Add government categories and labor categories first.</p>';
     return;
@@ -4355,12 +4251,12 @@ function renderSchoolLaborRateMatrix() {
 
 function saveSchoolLaborRates() {
   const inputs = document.querySelectorAll('#school-labor-rate-matrix input');
-  settings.schoolLaborRates = settings.schoolLaborRates || {};
+  settings.govLaborRates = settings.govLaborRates || {};
   inputs.forEach(inp => {
     const ct = inp.dataset.sct;
     const lc = inp.dataset.slc;
-    if(!settings.schoolLaborRates[ct]) settings.schoolLaborRates[ct] = {};
-    settings.schoolLaborRates[ct][lc] = parseFloat(inp.value) || 0;
+    if(!settings.govLaborRates[ct]) settings.govLaborRates[ct] = {};
+    settings.govLaborRates[ct][lc] = parseFloat(inp.value) || 0;
   });
   DB.saveSettings(settings);
   toast('Government labor rates saved!', 'success');
