@@ -488,7 +488,7 @@ html, body { height: 100%; font-family:'Inter',-apple-system,BlinkMacSystemFont,
 /* ─── PRINT STYLES ───────────────────────────────────────────────────────────── */
 @media print {
   body { background: white; font-size: 12px; }
-  #app-nav, #quote-page, #school-page, #school-history-page, #history-page, #admin-page, #toast-container, #app-loading { display: none !important; }
+  #app-nav, #quote-page, #school-page, #school-history-page, #history-page, #drafts-page, #admin-page, #toast-container, #app-loading { display: none !important; }
   #print-view { position: static !important; left: auto !important; visibility: visible !important; display: block !important; }
   .no-print { display: none !important; }
   @page { margin: 6mm 10mm 8mm 10mm; }
@@ -704,8 +704,9 @@ th.center, td.center { text-align: center; }
   <span class="nav-appname">Service Quotes</span>
   <div class="nav-divider"></div>
   <div class="nav-tabs">
-    <button class="nav-tab active" onclick="showPage('quote')">Private Quotes</button>
-    <button class="nav-tab" onclick="showPage('school')">Government Quotes</button>
+    <button class="nav-tab active" onclick="navToPrivateQuote()">Private Quotes</button>
+    <button class="nav-tab" onclick="navToGovQuote()">Government Quotes</button>
+    <button class="nav-tab" onclick="showPage('drafts')">Drafts <span id="drafts-badge" style="background:#c0392b;color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:3px;display:none;">0</span></button>
     <button class="nav-tab" onclick="showPage('history')">History</button>
     <button class="nav-tab" onclick="showPage('admin')">Admin</button>
   </div>
@@ -740,7 +741,6 @@ th.center, td.center { text-align: center; }
       </div>
       <div style="display:flex;gap:10px;">
         <button class="btn btn-charcoal" onclick="newQuote()">+ New Quote</button>
-        <button class="btn btn-gold" onclick="saveQuote()">Save</button>
         <button class="btn btn-accent" onclick="generateProposal()">Generate Proposal</button>
       </div>
     </div>
@@ -922,6 +922,10 @@ th.center, td.center { text-align: center; }
         </div>
       </div>
       <div class="totals-actions">
+        <div style="display:flex;gap:10px;margin-bottom:12px;">
+          <button class="btn btn-charcoal" onclick="saveAsDraft()">Save as Draft</button>
+          <button class="btn btn-charcoal" onclick="saveAsFinal()">Save as Final</button>
+        </div>
         <button class="btn btn-gold" onclick="generateProposal()" style="font-size:15px;padding:12px 28px;">Generate Proposal</button>
       </div>
     </div>
@@ -943,6 +947,19 @@ th.center, td.center { text-align: center; }
       <input type="text" id="history-search" placeholder="🔍  Search across Private + Government quotes by WO#, customer, or amount…" oninput="filterHistory()" style="width:100%;padding:10px 14px;border:1.5px solid var(--silver-light);border-radius:var(--radius-md);font-size:14px;background:white;box-shadow:var(--shadow-card);box-sizing:border-box;">
     </div>
     <div id="history-list"></div>
+  </div>
+</div>
+
+<!-- ════════════════ DRAFTS PAGE ════════════════ -->
+<div class="page" id="drafts-page">
+  <div style="padding:24px;max-width:1120px;margin:0 auto;">
+    <div class="history-header" style="margin-bottom:20px;">
+      <div>
+        <h1 style="font-size:24px;font-weight:700;color:var(--navy)">Drafts</h1>
+        <p style="color:var(--gray-500);font-size:13px;margin-top:4px;">Quotes in progress — open to continue, then Save as Final when done.</p>
+      </div>
+    </div>
+    <div id="drafts-list"></div>
   </div>
 </div>
 
@@ -1318,7 +1335,6 @@ th.center, td.center { text-align: center; }
       </div>
       <div style="display:flex;gap:10px;">
         <button class="btn btn-charcoal" onclick="newSchoolQuote()">+ New Quote</button>
-        <button class="btn btn-gold" onclick="saveSchoolQuote()">Save</button>
         <button class="btn btn-accent" onclick="generateSchoolProposal()">Generate Proposal</button>
       </div>
     </div>
@@ -1488,6 +1504,10 @@ th.center, td.center { text-align: center; }
         </div>
       </div>
       <div class="totals-actions">
+        <div style="display:flex;gap:10px;margin-bottom:12px;">
+          <button class="btn btn-charcoal" onclick="saveSchoolAsDraft()">Save as Draft</button>
+          <button class="btn btn-charcoal" onclick="saveSchoolAsFinal()">Save as Final</button>
+        </div>
         <button class="btn btn-gold" onclick="generateSchoolProposal()" style="font-size:15px;padding:12px 28px;">Generate Proposal</button>
       </div>
     </div>
@@ -1633,6 +1653,7 @@ const DB = {
       wo_number:     q.number || null,
       customer_name: q.customer?.name || null,
       grand_total:   q.grandTotal || 0,
+      status:        q.status || 'draft',
       saved_at:      q.savedAt || new Date().toISOString(),
       updated_at:    new Date().toISOString()
     });
@@ -1664,6 +1685,7 @@ const DB = {
       wo_number:     q.number || null,
       customer_name: q.customer?.name || null,
       grand_total:   q.grandTotal || 0,
+      status:        q.status || 'draft',
       saved_at:      q.savedAt || new Date().toISOString(),
       updated_at:    new Date().toISOString()
     });
@@ -1724,6 +1746,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setAppLoading(false);
   initQuoteBuilder();
   initSchoolBuilder();
+  updateDraftsBadge();
   document.getElementById('qb-date').textContent = formatDate(new Date());
   document.getElementById('sq-date').textContent  = formatDate(new Date());
 
@@ -1765,9 +1788,10 @@ function showPage(page) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById(page + '-page').classList.add('active');
   const tabs = document.querySelectorAll('.nav-tab');
-  const tabIdx = {'quote':0,'school':1,'history':2,'admin':3}[page];
+  const tabIdx = {'quote':0,'school':1,'drafts':2,'history':3,'admin':4}[page];
   if(tabs[tabIdx] !== undefined) tabs[tabIdx].classList.add('active');
   if(page === 'history') renderHistory();
+  if(page === 'drafts') renderDrafts();
   if(page === 'admin') initAdminPage();
 }
 
@@ -1897,7 +1921,7 @@ async function autoSaveToCloud() {
   const name = document.getElementById('q-cust-name').value.trim();
   const wo   = document.getElementById('qb-number').value.trim();
   if (!name && !wo) return;  // nothing meaningful to save yet
-  await saveQuote(true);
+  await saveQuote(true, 'draft');
 }
 function setAutoSaveStatus(state) {
   const el = document.getElementById('quote-save-status');
@@ -2345,7 +2369,7 @@ function calcTotals() {
 }
 
 // ─── SAVE QUOTE ───────────────────────────────────────────────────────────────
-async function saveQuote(silent=false) {
+async function saveQuote(silent=false, status=null) {
   if(!currentQuote) return;
   // Collect form values
   currentQuote.number              = document.getElementById('qb-number').value.trim();
@@ -2389,10 +2413,13 @@ async function saveQuote(silent=false) {
   currentQuote.taxPct     = taxRate ? taxRate.pct : 0;
   currentQuote.taxAmount  = subtotal * (currentQuote.taxPct / 100);
   currentQuote.grandTotal = subtotal + currentQuote.taxAmount;
+  if (status) currentQuote.status = status;
+  if (!currentQuote.status) currentQuote.status = 'draft';
   currentQuote.savedAt    = new Date().toISOString();
   await DB.saveQuote(currentQuote);
   _dirty = false;
-  if (!silent) toast('Quote saved!', 'success');
+  updateDraftsBadge();
+  if (!silent) toast(currentQuote.status === 'final' ? 'Quote finalized!' : 'Saved to Drafts ✓', 'success');
   setAutoSaveStatus('ok');
 }
 
@@ -2962,11 +2989,11 @@ async function renderHistory() {
   const searchEl = document.getElementById('history-search');
   if(searchEl) searchEl.value = '';
   const all = [
-    ...quotes.map(q => ({...q, _type:'private'})),
-    ...schoolQuotes.map(q => ({...q, _type:'government'}))
+    ...quotes.filter(q => !q.status || q.status === 'final').map(q => ({...q, _type:'private'})),
+    ...schoolQuotes.filter(q => !q.status || q.status === 'final').map(q => ({...q, _type:'government'}))
   ].sort((a,b) => new Date(b.savedAt||0) - new Date(a.savedAt||0));
   if(!all.length) {
-    el.innerHTML = '<div class="empty-state"><div class="empty-icon">🗂</div><p>No saved quotes yet.</p></div>';
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">🗂</div><p>No finalized quotes yet.</p></div>';
     return;
   }
   el.innerHTML = all.map(q => q._type === 'government' ? _schoolHistoryCardHTML(q) : _historyCardHTML(q)).join('');
@@ -2976,8 +3003,8 @@ function filterHistory() {
   const term = (document.getElementById('history-search').value || '').toLowerCase().trim();
   const el = document.getElementById('history-list');
   const all = [
-    ...quotes.map(q => ({...q, _type:'private'})),
-    ...schoolQuotes.map(q => ({...q, _type:'government'}))
+    ...quotes.filter(q => !q.status || q.status === 'final').map(q => ({...q, _type:'private'})),
+    ...schoolQuotes.filter(q => !q.status || q.status === 'final').map(q => ({...q, _type:'government'}))
   ].sort((a,b) => new Date(b.savedAt||0) - new Date(a.savedAt||0));
   if(!all.length) return;
   if(!term) { el.innerHTML = all.map(q => q._type === 'government' ? _schoolHistoryCardHTML(q) : _historyCardHTML(q)).join(''); return; }
@@ -3396,6 +3423,192 @@ function saveStates() {
 
 // ─── UTILITIES ────────────────────────────────────────────────────────────────
 
+
+// ─── DRAFTS & NAV ─────────────────────────────────────────────────────────────
+
+function updateDraftsBadge() {
+  const count = [...quotes, ...schoolQuotes].filter(q => q.status === 'draft').length;
+  const badge = document.getElementById('drafts-badge');
+  if (!badge) return;
+  badge.textContent = count;
+  badge.style.display = count > 0 ? 'inline' : 'none';
+}
+
+function navToPrivateQuote() {
+  if (_dirty && currentQuote) {
+    confirmAction('Unsaved Changes', 'Start a new private quote? Any unsaved changes will be lost (autosaved work is safe in Drafts).', () => {
+      _dirty = false;
+      _createNewQuote();
+      showPage('quote');
+    });
+  } else {
+    _createNewQuote();
+    showPage('quote');
+  }
+}
+
+function navToGovQuote() {
+  if (_sqDirty && currentSchoolQuote) {
+    confirmAction('Unsaved Changes', 'Start a new government quote? Any unsaved changes will be lost (autosaved work is safe in Drafts).', () => {
+      _sqDirty = false;
+      _createNewSchoolQuote();
+      showPage('school');
+    });
+  } else {
+    _createNewSchoolQuote();
+    showPage('school');
+  }
+}
+
+async function saveAsDraft() {
+  await saveQuote(false, 'draft');
+  updateDraftsBadge();
+}
+
+async function saveAsFinal() {
+  await saveQuote(false, 'final');
+  currentQuote = null;
+  _dirty = false;
+  showPage('history');
+}
+
+async function saveSchoolAsDraft() {
+  await saveSchoolQuote(false, 'draft');
+  updateDraftsBadge();
+}
+
+async function saveSchoolAsFinal() {
+  await saveSchoolQuote(false, 'final');
+  currentSchoolQuote = null;
+  _sqDirty = false;
+  showPage('history');
+}
+
+function _draftCardHTML(q) {
+  return `<div class="history-card draft" onclick="loadDraftQuote('${q.id}')">
+    <div class="hc-num">WO# ${escHtml(q.number||'—')}</div>
+    <div class="hc-custnum"><span style="background:var(--navy);color:#fff;padding:1px 7px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.3px;">Private</span></div>
+    <div class="hc-customer">
+      <div class="hc-name">${escHtml(q.customer?.name||'(No name)')}</div>
+      <div class="hc-date">${q.savedAt ? formatDate(new Date(q.savedAt)) : '—'}</div>
+    </div>
+    <div class="hc-total">${formatCurrency(q.grandTotal||0)}</div>
+    <div class="hc-actions" onclick="event.stopPropagation()">
+      <button class="btn btn-charcoal btn-sm" onclick="loadDraftQuote('${q.id}')">Open</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteDraft('private','${q.id}')">Delete</button>
+    </div>
+  </div>`;
+}
+
+function _draftSchoolCardHTML(q) {
+  const cat = (settings.govCategories||[]).find(c=>c.id===q.schoolCatId);
+  return `<div class="history-card draft" onclick="loadDraftSchoolQuote('${q.id}')">
+    <div class="hc-num">WO# ${escHtml(q.number||'—')}</div>
+    <div class="hc-custnum"><span style="background:var(--green);color:#fff;padding:1px 7px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.3px;">Gov't</span> ${escHtml(cat?.name||q.schoolCatName||'—')}</div>
+    <div class="hc-customer">
+      <div class="hc-name">${escHtml(q.customer?.name||'(No name)')}</div>
+      <div class="hc-date">${q.savedAt ? formatDate(new Date(q.savedAt)) : '—'}</div>
+    </div>
+    <div class="hc-total">${formatCurrency(q.grandTotal||0)}</div>
+    <div class="hc-actions" onclick="event.stopPropagation()">
+      <button class="btn btn-charcoal btn-sm" onclick="loadDraftSchoolQuote('${q.id}')">Open</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteDraft('gov','${q.id}')">Delete</button>
+    </div>
+  </div>`;
+}
+
+async function renderDrafts() {
+  const el = document.getElementById('drafts-list');
+  if (!el) return;
+  el.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><p>Loading drafts...</p></div>';
+  [quotes, schoolQuotes] = await Promise.all([DB.getQuotes(), DB.getSchoolQuotes()]);
+  updateDraftsBadge();
+  const drafts = [
+    ...quotes.filter(q => q.status === 'draft').map(q => ({...q, _type:'private'})),
+    ...schoolQuotes.filter(q => q.status === 'draft').map(q => ({...q, _type:'government'}))
+  ].sort((a,b) => new Date(b.savedAt||0) - new Date(a.savedAt||0));
+  if (!drafts.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">🗂</div><p>No drafts yet. Save a quote as Draft to see it here.</p></div>';
+    return;
+  }
+  el.innerHTML = drafts.map(q => q._type === 'government' ? _draftSchoolCardHTML(q) : _draftCardHTML(q)).join('');
+}
+
+function loadDraftQuote(id) {
+  const q = quotes.find(x => x.id === id);
+  if (!q) return;
+  currentQuote = JSON.parse(JSON.stringify(q));
+  document.getElementById('q-cust-name').value  = q.customer?.name || '';
+  document.getElementById('q-cust-num').value   = q.customer?.custNum || '';
+  document.getElementById('q-cust-phone').value = q.customer?.phone || '';
+  document.getElementById('q-cust-email').value = q.customer?.email || '';
+  document.getElementById('q-cust-addr').value  = q.customer?.address || '';
+  const cityEl = document.getElementById('q-cust-city'); if(cityEl) cityEl.value = q.customer?.city || '';
+  const stateEl = document.getElementById('q-cust-state'); if(stateEl) stateEl.value = q.customer?.state || '';
+  const zipEl = document.getElementById('q-cust-zip'); if(zipEl) zipEl.value = q.customer?.zip || '';
+  document.getElementById('q-cust-type').value  = q.customer?.typeId || '';
+  const descEl = document.getElementById('q-description'); if(descEl) descEl.value = q.description || '';
+  const makeEl = document.getElementById('q-unit-make'); if(makeEl) makeEl.value = q.unit?.make || '';
+  const modelEl = document.getElementById('q-unit-model'); if(modelEl) modelEl.value = q.unit?.model || '';
+  const serialEl = document.getElementById('q-unit-serial'); if(serialEl) serialEl.value = q.unit?.serial || '';
+  const unitIdEl = document.getElementById('q-unit-id'); if(unitIdEl) unitIdEl.value = q.unit?.id || '';
+  const taxEl = document.getElementById('q-tax-rate'); if(taxEl) taxEl.value = q.taxRateId || '';
+  document.getElementById('q-notes').value      = q.notes || '';
+  document.getElementById('q-internal').value   = q.internalNotes || '';
+  document.getElementById('qb-number').value = q.number || '';
+  document.getElementById('qb-date').textContent = q.savedAt ? formatDate(new Date(q.savedAt)) : formatDate(new Date());
+  renderLaborRows();
+  renderMaterialRows();
+  renderMiscRows();
+  calcTotals();
+  _dirty = false;
+  showPage('quote');
+  toast('Draft loaded: ' + (q.customer?.name || 'WO# ' + (q.number||'(no number)')), 'success');
+}
+
+function loadDraftSchoolQuote(id) {
+  const q = schoolQuotes.find(x => x.id === id);
+  if (!q) return;
+  currentSchoolQuote = JSON.parse(JSON.stringify(q));
+  document.getElementById('sq-number').value = q.number||'';
+  document.getElementById('sq-cust-name').value = q.customer?.name||'';
+  document.getElementById('sq-cust-num').value = q.customer?.custNum||'';
+  document.getElementById('sq-cust-phone').value = q.customer?.phone||'';
+  document.getElementById('sq-cust-email').value = q.customer?.email||'';
+  document.getElementById('sq-cust-addr').value = q.customer?.address||'';
+  const cityEl = document.getElementById('sq-cust-city'); if(cityEl) cityEl.value = q.customer?.city||'';
+  const stateEl = document.getElementById('sq-cust-state'); if(stateEl) stateEl.value = q.customer?.state||'';
+  const zipEl = document.getElementById('sq-cust-zip'); if(zipEl) zipEl.value = q.customer?.zip||'';
+  const descEl = document.getElementById('sq-description'); if(descEl) descEl.value = q.description||'';
+  const makeEl = document.getElementById('sq-unit-make'); if(makeEl) makeEl.value = q.unit?.make||'';
+  const modelEl = document.getElementById('sq-unit-model'); if(modelEl) modelEl.value = q.unit?.model||'';
+  const serialEl = document.getElementById('sq-unit-serial'); if(serialEl) serialEl.value = q.unit?.serial||'';
+  const unitIdEl = document.getElementById('sq-unit-id'); if(unitIdEl) unitIdEl.value = q.unit?.id||'';
+  const notesEl = document.getElementById('sq-notes'); if(notesEl) notesEl.value = q.notes||'';
+  const internalEl = document.getElementById('sq-internal'); if(internalEl) internalEl.value = q.internalNotes||'';
+  const dateEl = document.getElementById('sq-date'); if(dateEl) dateEl.textContent = q.savedAt ? formatDate(new Date(q.savedAt)) : formatDate(new Date());
+  populateSchoolCatDropdown();
+  renderSchoolLaborRows();
+  renderSchoolMaterialRows();
+  renderSchoolMiscRows();
+  calcSchoolTotals();
+  _sqDirty = false;
+  showPage('school');
+  toast('Draft loaded: ' + (q.customer?.name || 'WO# ' + (q.number||'(no number)')), 'success');
+}
+
+function deleteDraft(type, id) {
+  confirmAction('Delete Draft', 'Permanently delete this draft?', async () => {
+    if (type === 'gov') {
+      await DB.deleteSchoolQuote(id);
+    } else {
+      await DB.deleteQuote(id);
+    }
+    renderDrafts();
+    toast('Draft deleted.');
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // SCHOOL QUOTES BUILDER
 // ═══════════════════════════════════════════════════════════════════════════
@@ -3414,7 +3627,7 @@ async function autoSaveSchoolToCloud() {
   const name = document.getElementById('sq-cust-name').value.trim();
   const wo   = document.getElementById('sq-number').value.trim();
   if(!name && !wo) return;
-  await saveSchoolQuote(true);
+  await saveSchoolQuote(true, 'draft');
   setAutoSaveStatus('ok');
 }
 
@@ -3422,6 +3635,7 @@ function _createNewSchoolQuote() {
   currentSchoolQuote = {
     id: uid(), type: 'school',
     number: '', date: new Date().toISOString().slice(0,10),
+    status: 'draft',
     schoolCatId: '', schoolCatName: '',
     markup: 0,
     customer: { name:'', custNum:'', phone:'', email:'', address:'', city:'', state:'', zip:'' },
@@ -3740,7 +3954,7 @@ function calcSchoolTotals() {
 }
 
 // ── SAVE ──
-async function saveSchoolQuote(silent=false) {
+async function saveSchoolQuote(silent=false, status=null) {
   if(!currentSchoolQuote) return;
   currentSchoolQuote.number           = document.getElementById('sq-number').value.trim();
   currentSchoolQuote.customer.name    = document.getElementById('sq-cust-name').value;
@@ -3765,10 +3979,13 @@ async function saveSchoolQuote(silent=false) {
   const mist=currentSchoolQuote.miscLines.reduce((s,r)=>r.noCharge?s:s+(parseFloat(r.qty)||1)*(parseFloat(r.unitPrice)||0),0);
   currentSchoolQuote.laborTotal=lt; currentSchoolQuote.matTotal=mt;
   currentSchoolQuote.miscTotal=mist; currentSchoolQuote.grandTotal=lt+mt+mist;
+  if (status) currentSchoolQuote.status = status;
+  if (!currentSchoolQuote.status) currentSchoolQuote.status = 'draft';
   currentSchoolQuote.savedAt=new Date().toISOString();
   await DB.saveSchoolQuote(currentSchoolQuote);
   _sqDirty=false;
-  if(!silent) toast('Government quote saved!','success');
+  updateDraftsBadge();
+  if(!silent) toast(currentSchoolQuote.status === 'final' ? 'Quote finalized!' : 'Saved to Drafts ✓','success');
 }
 
 // ── PREVIEW / PRINT ──
