@@ -3523,6 +3523,26 @@ async function releaseSchoolQuoteLock() {
   if (_lockedSchoolQuoteId) { await DB.releaseLock('sq_gov_quotes', _lockedSchoolQuoteId); _lockedSchoolQuoteId = null; }
 }
 
+// Release locks when tab is closed or navigated away
+window.addEventListener('beforeunload', () => {
+  if (_lockedQuoteId) {
+    fetch(SUPABASE_URL + '/rest/v1/sq_quotes?id=eq.' + encodeURIComponent(_lockedQuoteId), {
+      method: 'PATCH',
+      headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ locked_by: null, locked_at: null }),
+      keepalive: true
+    });
+  }
+  if (_lockedSchoolQuoteId) {
+    fetch(SUPABASE_URL + '/rest/v1/sq_gov_quotes?id=eq.' + encodeURIComponent(_lockedSchoolQuoteId), {
+      method: 'PATCH',
+      headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ locked_by: null, locked_at: null }),
+      keepalive: true
+    });
+  }
+});
+
 function updateDraftsBadge() {
   const count = [...quotes, ...schoolQuotes].filter(q => q.status === 'draft').length;
   const badge = document.getElementById('drafts-badge');
@@ -3559,34 +3579,30 @@ function navToGovQuote() {
 
 async function saveAsDraft() {
   await saveQuote(false, 'draft');
-  await releaseQuoteLock();
-  hideEditBanner();
   updateDraftsBadge();
+  _createNewQuote();
 }
 
 async function saveAsFinal() {
   await saveQuote(false, 'final');
   await releaseQuoteLock();
   hideEditBanner();
-  currentQuote = null;
   _dirty = false;
-  showPage('history');
+  toast('Quote finalized! Click Preview Proposal to review.', 'success');
 }
 
 async function saveSchoolAsDraft() {
   await saveSchoolQuote(false, 'draft');
-  await releaseSchoolQuoteLock();
-  hideSchoolEditBanner();
   updateDraftsBadge();
+  _createNewSchoolQuote();
 }
 
 async function saveSchoolAsFinal() {
   await saveSchoolQuote(false, 'final');
   await releaseSchoolQuoteLock();
   hideSchoolEditBanner();
-  currentSchoolQuote = null;
   _sqDirty = false;
-  showPage('history');
+  toast('Quote finalized! Click Preview Proposal to review.', 'success');
 }
 
 function _draftCardHTML(q) {
