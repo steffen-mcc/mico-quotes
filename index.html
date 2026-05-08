@@ -502,6 +502,16 @@ html, body { height: 100%; font-family:'Inter',-apple-system,BlinkMacSystemFont,
 /* ─── NOTES SECTION ─────────────────────────────────────────────────────────── */
 .notes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
+/* ─── ATTACHMENTS ───────────────────────────────────────────────────────────── */
+.attach-list { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; min-height:0; }
+.attach-item { display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--gray-50); border:1px solid var(--silver-light); border-radius:var(--radius-sm); font-size:13px; }
+.attach-icon { font-size:16px; flex-shrink:0; }
+.attach-name { flex:1; font-weight:500; color:var(--navy); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:280px; }
+.attach-size { color:var(--silver); font-size:11px; flex-shrink:0; }
+.attach-date { color:var(--silver); font-size:11px; flex-shrink:0; width:76px; text-align:right; }
+.attach-upload-row { display:flex; align-items:center; gap:10px; margin-top:4px; }
+.attach-hint { font-size:11px; color:var(--silver); }
+
 /* ─── BADGE / PILL ──────────────────────────────────────────────────────────── */
 .badge { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 11px; font-weight: 700; }
 
@@ -964,6 +974,19 @@ th.center, td.center { text-align: center; }
           <label>Internal Notes (not on quote)</label>
           <textarea id="q-internal" placeholder="Internal reference notes, reminders..." oninput="markDirty()"></textarea>
         </div>
+      </div>
+    </div>
+
+    <!-- Attachments -->
+    <div class="card">
+      <div class="quote-section-title">Attachments</div>
+      <div id="q-attach-list" class="attach-list"></div>
+      <div class="attach-upload-row">
+        <label class="btn btn-charcoal btn-sm" for="q-attach-input" style="cursor:pointer">＋ Attach File</label>
+        <input type="file" id="q-attach-input" style="display:none" multiple
+          accept=".pdf,.xls,.xlsx,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp"
+          onchange="handleSqAttachUpload(currentQuote.id,'private','q-attach-list',this)">
+        <span class="attach-hint">PDF, Excel, Word, or image &middot; 50 MB max per file</span>
       </div>
     </div>
 
@@ -1575,6 +1598,19 @@ th.center, td.center { text-align: center; }
       </div>
     </div>
 
+    <!-- Attachments -->
+    <div class="card">
+      <div class="quote-section-title">Attachments</div>
+      <div id="sq-attach-list" class="attach-list"></div>
+      <div class="attach-upload-row">
+        <label class="btn btn-charcoal btn-sm" for="sq-attach-input" style="cursor:pointer">＋ Attach File</label>
+        <input type="file" id="sq-attach-input" style="display:none" multiple
+          accept=".pdf,.xls,.xlsx,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp"
+          onchange="handleSqAttachUpload(currentSchoolQuote.id,'government','sq-attach-list',this)">
+        <span class="attach-hint">PDF, Excel, Word, or image &middot; 50 MB max per file</span>
+      </div>
+    </div>
+
     <!-- Totals -->
     <div class="totals-panel">
       <div class="totals-grid">
@@ -1690,6 +1726,86 @@ const DEFAULT_SETTINGS = {
     { id:'tr_1', name:'NY Sales Tax', pct:8.875, state:'NY' }
   ]
 };
+
+// ─── ATTACHMENTS ─────────────────────────────────────────────────────────────
+const SQ_ATTACH_BUCKET = 'quote-attachments';
+
+function _attachIcon(filename) {
+  const ext = (filename||'').split('.').pop().toLowerCase();
+  if (ext === 'pdf') return '📄';
+  if (['xls','xlsx'].includes(ext)) return '📊';
+  if (['doc','docx'].includes(ext)) return '📝';
+  if (['jpg','jpeg','png','gif','webp'].includes(ext)) return '🖼️';
+  return '📎';
+}
+function _fmtBytes(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes/1024).toFixed(0) + ' KB';
+  return (bytes/1048576).toFixed(1) + ' MB';
+}
+
+async function loadSqAttachments(quoteId, listElId) {
+  const listEl = document.getElementById(listElId);
+  if (!listEl || !quoteId) return;
+  listEl.innerHTML = '<div style="color:var(--silver);font-size:12px;padding:4px 0">Loading…</div>';
+  const { data, error } = await sb.from('sq_attachments').select('*').eq('quote_id', quoteId).order('uploaded_at', {ascending:true});
+  if (error) { listEl.innerHTML = ''; return; }
+  _renderSqAttachList(data||[], listEl, quoteId, listElId);
+}
+
+function _renderSqAttachList(attachments, listEl, quoteId, listElId) {
+  if (!attachments.length) {
+    listEl.innerHTML = '<div style="color:var(--silver);font-size:12px;padding:4px 0">No files attached yet.</div>';
+    return;
+  }
+  listEl.innerHTML = attachments.map(a => `
+    <div class="attach-item">
+      <span class="attach-icon">${_attachIcon(escHtml(a.filename))}</span>
+      <span class="attach-name" title="${escHtml(a.filename)}">${escHtml(a.filename)}</span>
+      <span class="attach-size">${_fmtBytes(a.file_size)}</span>
+      <span class="attach-date">${a.uploaded_at ? new Date(a.uploaded_at).toLocaleDateString() : ''}</span>
+      <button class="btn btn-charcoal btn-sm" onclick="openSqAttachment(${JSON.stringify(a.storage_path)})">Open</button>
+      <button class="btn btn-charcoal btn-sm" style="color:var(--red)" onclick="deleteSqAttachment(${JSON.stringify(a.id)},${JSON.stringify(a.storage_path)},${JSON.stringify(quoteId)},${JSON.stringify(listElId)})">&#x2715;</button>
+    </div>
+  `).join('');
+}
+
+async function openSqAttachment(storagePath) {
+  const { data, error } = await sb.storage.from(SQ_ATTACH_BUCKET).createSignedUrl(storagePath, 300);
+  if (error || !data?.signedUrl) { toast('Could not open file.', 'error'); return; }
+  window.open(data.signedUrl, '_blank');
+}
+
+async function handleSqAttachUpload(quoteId, quoteType, listElId, input) {
+  if (!quoteId) { toast('Save the quote before attaching files.', 'error'); input.value=''; return; }
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  input.value = '';
+  for (const file of files) {
+    if (file.size > 52428800) { toast(escHtml(file.name) + ' exceeds 50 MB limit.', 'error'); continue; }
+    const safeName = file.name.replace(/[^a-zA-Z0-9._\-]/g,'_');
+    const path = 'service-quotes/' + quoteId + '/' + Date.now() + '-' + safeName;
+    const { error: upErr } = await sb.storage.from(SQ_ATTACH_BUCKET).upload(path, file);
+    if (upErr) { toast('Upload failed: ' + escHtml(file.name), 'error'); continue; }
+    const { error: dbErr } = await sb.from('sq_attachments').insert({
+      quote_id: quoteId, quote_type: quoteType,
+      filename: file.name, storage_path: path, file_size: file.size,
+      uploaded_by: window.micoUser?.id || null
+    });
+    if (dbErr) { toast('Could not save attachment record.', 'error'); continue; }
+    toast(escHtml(file.name) + ' attached.', 'success');
+  }
+  loadSqAttachments(quoteId, listElId);
+}
+
+async function deleteSqAttachment(id, storagePath, quoteId, listElId) {
+  confirmAction('Remove Attachment', 'Remove this file from the quote?', async () => {
+    await sb.storage.from(SQ_ATTACH_BUCKET).remove([storagePath]);
+    await sb.from('sq_attachments').delete().eq('id', id);
+    loadSqAttachments(quoteId, listElId);
+  });
+}
 
 // ─── SUPABASE CLIENT ─────────────────────────────────────────────────────────
 const SUPABASE_URL = 'https://kbqkwlhmkvwnutqkcstx.supabase.co';
@@ -3161,6 +3277,7 @@ function loadQuote(id) {
   showEditBanner(q, 'history');
   showPage('quote');
   toast('Quote loaded: WO# ' + (q.number||'(no number)'), 'success');
+  loadSqAttachments(q.id, 'q-attach-list');
 }
 
 function deleteQuote(id) {
@@ -3755,6 +3872,7 @@ function loadDraftQuote(id) {
   showEditBanner(q, 'draft');
   showPage('quote');
   toast('Draft loaded: ' + (q.customer?.name || 'WO# ' + (q.number||'(no number)')), 'success');
+  loadSqAttachments(q.id, 'q-attach-list');
 }
 
 function loadDraftSchoolQuote(id) {
@@ -3789,6 +3907,7 @@ function loadDraftSchoolQuote(id) {
   showSchoolEditBanner(q, 'draft');
   showPage('school');
   toast('Draft loaded: ' + (q.customer?.name || 'WO# ' + (q.number||'(no number)')), 'success');
+  loadSqAttachments(q.id, 'sq-attach-list');
 }
 
 function deleteDraft(type, id) {
@@ -4598,6 +4717,7 @@ function loadSchoolQuote(id) {
   showSchoolEditBanner(q, 'history');
   showPage('school');
   toast('Government quote loaded: WO# '+(q.number||'(no number)'),'success');
+  loadSqAttachments(q.id, 'sq-attach-list');
 }
 
 function deleteSchoolQuote(id) {
