@@ -1772,9 +1772,10 @@ function _renderSqAttachList(attachments, listEl, quoteId, listElId) {
 }
 
 async function openSqAttachment(storagePath) {
+  const win = window.open('', '_blank');
   const { data, error } = await sb.storage.from(SQ_ATTACH_BUCKET).createSignedUrl(storagePath, 300);
-  if (error || !data?.signedUrl) { toast('Could not open file.', 'error'); return; }
-  window.open(data.signedUrl, '_blank');
+  if (error || !data?.signedUrl) { if (win) win.close(); toast('Could not open file.', 'error'); return; }
+  win.location.href = data.signedUrl;
 }
 
 async function handleSqAttachUpload(quoteId, quoteType, listElId, input) {
