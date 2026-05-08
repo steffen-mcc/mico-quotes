@@ -1765,8 +1765,8 @@ function _renderSqAttachList(attachments, listEl, quoteId, listElId) {
       <span class="attach-name" title="${escHtml(a.filename)}">${escHtml(a.filename)}</span>
       <span class="attach-size">${_fmtBytes(a.file_size)}</span>
       <span class="attach-date">${a.uploaded_at ? new Date(a.uploaded_at).toLocaleDateString() : ''}</span>
-      <button class="btn btn-charcoal btn-sm" onclick="openSqAttachment(${JSON.stringify(a.storage_path)})">Open</button>
-      <button class="btn btn-charcoal btn-sm" style="color:var(--red)" onclick="deleteSqAttachment(${JSON.stringify(a.id)},${JSON.stringify(a.storage_path)},${JSON.stringify(quoteId)},${JSON.stringify(listElId)})">&#x2715;</button>
+      <button class="btn btn-charcoal btn-sm" onclick='openSqAttachment(${JSON.stringify(a.storage_path)})'>Open</button>
+      <button class="btn btn-charcoal btn-sm" style="color:var(--red)" onclick='deleteSqAttachment(${JSON.stringify(a.id)},${JSON.stringify(a.storage_path)},${JSON.stringify(quoteId)},${JSON.stringify(listElId)})'>&#x2715;</button>
     </div>
   `).join('');
 }
