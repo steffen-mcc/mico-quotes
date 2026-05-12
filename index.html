@@ -2349,7 +2349,7 @@ function removeLaborRow(id) {
 
 // ─── MATERIAL ROWS ────────────────────────────────────────────────────────────
 function addMaterialRow() {
-  const row = { id: uid(), type:'select', partId:'', description:'', qty:1, cost:0, markup:0, sellPrice:0, markupOverride:false, sellPriceOverride:false };
+  const row = { id: uid(), type:'free', partId:'', description:'', qty:1, cost:0, markup:0, sellPrice:0, markupOverride:false, sellPriceOverride:false };
   currentQuote.materialLines.push(row);
   renderMaterialRows();
   markDirty();
@@ -4180,7 +4180,7 @@ function removeSchoolLaborRow(id) {
 function addSchoolMaterialRow() {
   if(!currentSchoolQuote) return;
   const markup = currentSchoolQuote.markup||0;
-  const row = { id:uid(), type:'select', partId:'', description:'', qty:1, cost:0, markup, sellPrice:0 };
+  const row = { id:uid(), type:'free', partId:'', description:'', qty:1, cost:0, markup, sellPrice:0 };
   currentSchoolQuote.materialLines.push(row);
   renderSchoolMaterialRows(); markSchoolDirty();
 }
